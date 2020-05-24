@@ -1,4 +1,4 @@
-# Export Layers As Files
+# Export Layers And Groups To Files
 
 Photoshop script for exporting layers and/or groups to separate files.
 
