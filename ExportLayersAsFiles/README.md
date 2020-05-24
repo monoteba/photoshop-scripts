@@ -28,7 +28,9 @@ The filename is defined as a mix of a custom name together with tags that insert
 | `{group}` | Inserts the name(s) of the parent groups, divided by the **Group Divider** |
 | `{layer}` | Inserts the layer or group name that is currently being exported |
 
-Examples: `Hero_{group}{layer}` would become `Hero_FaceEyes`.
+Example: 
+
+`Hero_{group}{layer}` would become `Hero_FaceEyes`.
 
 With the **Group Divider** set to `Underscore` the above example would output `Hero_Face_Eyes`.
 
