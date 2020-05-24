@@ -2,7 +2,7 @@
 
 Photoshop script for exporting layers and/or groups to separate files.
 
-Download [ExportLayersAsFiles.jsx](https://raw.githubusercontent.com/mortenblaa/photoshop-scripts/master/ExportLayersAsFiles/ExportLayersAsFiles.jsx) and copy it to the Photoshop scripts folder. Alternatively you can open it in Photoshop using File > Scripts > Browse...
+Download [Export Layers And Groups To Files.jsx](https://raw.githubusercontent.com/mortenblaa/photoshop-scripts/master/ExportLayersAsFiles/Export%20Layers%20And%20Groups%20To%20Files.jsx) and copy it to the Photoshop scripts folder. Alternatively you can open it in Photoshop using File > Scripts > Browse...
 
 Tested with Photoshop CC 2020.
 
