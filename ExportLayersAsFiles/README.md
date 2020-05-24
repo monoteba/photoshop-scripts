@@ -2,6 +2,8 @@
 
 Photoshop script for exporting layers and/or groups to separate files.
 
+Tested with Photoshop CC 2020.
+
 ## Features
 
 - Different output formats (PNG, JPG, TIFF, PSD) depending on document bit depth
