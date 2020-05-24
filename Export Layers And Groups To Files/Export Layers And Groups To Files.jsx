@@ -45,10 +45,6 @@ const kDivider = app.stringIDToTypeID("Divider");
 
 function main(options)
 {
-	// Exit if no documents are open
-	if (app.documents.length == false)
-		return;
-
 	// Test if file has ever been saved
 	try
 	{
@@ -585,6 +581,10 @@ function saveFile(doc, path, filename, format, dryrun)
 // Show the dialog window with options
 function showDialog()
 {
+	// Exit if no documents are open
+	if (app.documents.length == false)
+		return;
+
 	var settings = loadSettings();
 
 	var win = new Window("dialog", "Export Layers And Groups To Files", undefined, {resizeable: false});
