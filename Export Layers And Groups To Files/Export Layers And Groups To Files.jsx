@@ -1,5 +1,4 @@
 // todo: make script work with unsaved documents
-// todo: enumerate layers with identical names
 
 /*
 MIT License
@@ -29,7 +28,7 @@ SOFTWARE.
 
 const kOptions = 
 {
-	NAME: "ExportLayers_k41d8godw",
+	UUID: "53b4b8d0-c174-419a-b65e-14fd41a2ec58",
 	FILENAME: app.stringIDToTypeID("Filename"),
 	NOCOLOR: app.stringIDToTypeID("NoColor"),
 	RED: app.stringIDToTypeID("Red"),
@@ -46,8 +45,11 @@ const kOptions =
 	ADJUSTMENTLAYER: app.stringIDToTypeID("AdjustmentLayer"),
 	CHILDREN: app.stringIDToTypeID("Children"),
 	FORMAT: app.stringIDToTypeID("Format"),
-	GROUPDIVIDER: app.stringIDToTypeID("GroupDivider"),
+	GROUPSUFFIX: app.stringIDToTypeID("GroupSuffix"),
+	PADDINGPREFIX: app.stringIDToTypeID("PaddingPrefix"),
 	BACKGROUND: app.stringIDToTypeID("Background"),
+	SORTINGORDER: app.stringIDToTypeID("SortingOrder"),
+	VERIFYOVERWRITE: app.stringIDToTypeID("VerifyOverwrite"),
 }
 
 // global object
@@ -58,183 +60,27 @@ var g = {
 	options: null,
 	outputPath: "",
 	layerColors: ["No Color", "Red", "Orange", "Yellow", "Green", "Blue", "Violet", "Gray"],
-	groupDivider: "",
+	groupSuffix: "",
+	paddingPrefix: "",
 };
 
 function main()
 {
-	// Test if file has ever been saved
-	try
-	{
-		app.activeDocument.path;
-	}
-	catch (err)
-	{
-		alert("Script could not execute :/\n" + err);
-		return;
-	}
-
-	// Store original document name
-	g.docName = getDocumentName(app.activeDocument);
-
-	// Get current document path
-	var fname = app.activeDocument.fullName.toString()
-	var path = fname.substring(0, fname.lastIndexOf("/"));
-
-	// Ask for folder to save images to
-	var outputPath = Folder(path).selectDlg("Select Save Folder");
-
-	if (outputPath == null)
+	if (initialize() === false)
 	{
 		return;
-	}
-
-	g.outputPath = outputPath;
-
-	// Duplicate the active document
-	app.activeDocument = app.activeDocument.duplicate();
-
-	g.doc = app.activeDocument;
-	g.targetLayers = []
-
-	// Determine divider
-	switch (g.options.divider)
-	{
-		case "Space":
-			g.groupDivider = " ";
-			break;
-		case "Dash":
-			g.groupDivider = "-";
-			break;
-		case "Underscore":
-			g.groupDivider = "_";
-			break;
-		case "Period":
-			g.groupDivider = ".";
-			break;
 	}
 
 	// Find all layers ordered by top to bottom, except adjustment layers
-	for (var i = 0; i < g.doc.layers.length; i++)
-	{
-		// Ignore adjustment layers
-		if (isAdjustment(g.doc.layers[i]) === false)
-		{
-			g.targetLayers.push(g.doc.layers[i]);
+	g.targetLayers = getAllLayers(g.options.children, false);
 
-			// Find all child layers
-			if (g.options.children)
-			{
-				var childLayers = [];
-				findChildLayers(g.doc.layers[i], childLayers);
-
-				// Add all children to the list of layers
-				for (var j = 0; j < childLayers.length; j++)
-				{
-					// Ignore adjustment layers
-					if (isAdjustment(childLayers[j]) === false)
-					{
-						g.targetLayers.push(childLayers[j]);
-					}
-				}
-			}
-		}
-	}
-
-	// Filter out empty groups
-	for (var i = g.targetLayers.length - 1; i >= 0; i--)
-	{
-		if (isEmptyGroup(g.targetLayers[i]))
-		{
-			g.targetLayers.splice(i, 1);
-		}
-	}
-
-	// Filter out layers
-	if (g.options.layers === false)
-	{
-		for (var i = g.targetLayers.length - 1; i >= 0; i--)
-		{
-			if (g.targetLayers[i].typename === "ArtLayer")
-			{
-				g.targetLayers.splice(i, 1);
-			}
-		}
-	}
-
-	// Filter out groups
-	if (g.options.groups === false)
-	{
-		for (var i = g.targetLayers.length - 1; i >= 0; i--)
-		{
-			if (g.targetLayers[i].typename === "LayerSet")
-			{
-				g.targetLayers.splice(i, 1);
-			}
-		}
-	}
-
-	// Filter out colors
-	var colorOptions = [g.options.noColor, g.options.red, g.options.orange, g.options.yellow, g.options.green, g.options.blue, g.options.violet, g.options.gray];
-
-	for (var i = g.layerColors.length - 1; i >= 0; i--)
-	{
-		if (colorOptions[i] === false)
-		{
-			g.layerColors.splice(i, 1);
-		}
-	}
-
-	if (g.layerColors.length === 0)
-	{
-		g.targetLayers = [];
-	}
-
-	for (var i = g.targetLayers.length - 1; i >= 0; i--)
-	{
-		if (layerInColors(g.targetLayers[i]) === false)
-		{
-			g.targetLayers.splice(i, 1);
-		}
-	}
-
-	// Filter out hidden layers
-	if (g.options.hidden === false)
-	{
-		for (var i = g.targetLayers.length - 1; i >= 0; i--)
-		{
-			if (visibleInHierarchy(g.targetLayers[i]) === false)
-			{
-				g.targetLayers.splice(i, 1);
-			}
-		}
-	}
-
-	// Filter out background layer
-	for (var i = 0; i < g.targetLayers.length; i++)
-	{
-		if (g.targetLayers[i].isBackgroundLayer)
-		{
-			if (g.options.background === false)
-			{
-				g.targetLayers[i].isBackgroundLayer = false;
-				g.targetLayers[i].name = "Background";
-			}
-			else
-			{
-				g.targetLayers.splice(i, 1);
-			}
-			break;
-		}
-	}
-
-	// Create list of layers visibility state
-	var visibleLayerDict = {}
-	var allLayers = getAllLayers(true);
-	for (var i = 0; i < allLayers.length; i++)
-	{
-		visibleLayerDict[allLayers[i].id] = allLayers[i].visible;
-	}
+	// Filter out layers based on user preferences
+	filterEmptyGroups();
+	filterLayers();
+	filterGroups();
+	filterLayersByColor();
+	filterHidden();
+	filterBackground();
 
 	// Exit if there are zero layers to export
 	if (g.targetLayers.length === 0)
@@ -244,37 +90,63 @@ function main()
 		return;
 	}
 
-	// Make a dry run to see if any files already exists
-	for (var i = 0; i < g.targetLayers.length; i++)
+	// Determine which character to use as suffix for group names
+	g.groupSuffix = getPrefixSuffix(g.options.groupSuffix);
+	g.paddingPrefix = getPrefixSuffix(g.options.paddingPrefix);
+
+	// Reverse targetLayers?
+	if (g.options.sortingOrder === "DESC")
 	{
-		var filename = resolveName(g.targetLayers[i]);
-		var result = saveFile(filename, true);
-		if (result === false)
+		g.targetLayers = g.targetLayers.reverse();
+	}
+
+	// Create list of all layers visibility state, including adjustment layers
+	var visibleLayerDict = {}
+	var allLayers = getAllLayers(true, true);
+	for (var i = 0; i < allLayers.length; i++)
+	{
+		visibleLayerDict[allLayers[i].id] = allLayers[i].visible;
+	}
+
+	var outputNames = getOutputNames();
+
+	// Confirm overwriting files
+	if (g.options.verifyOverwrite)
+	{
+		// Make a dry run to see if any files already exists
+		for (var i = 0; i < g.targetLayers.length; i++)
 		{
-			return;
-		}
-		else if (result === true)
-		{
-			break;
+			var result = saveFile(outputNames[i], true);
+			if (result === false)
+			{
+				g.doc.close(SaveOptions.DONOTSAVECHANGES);
+				return;
+			}
+			else if (result === true)
+			{
+				break;
+			}
 		}
 	}
 
 	progress(g.targetLayers.length);
 
+	// Cache layers we want to hide
+	var layersToHide = getAllLayers(true, !g.options.adjustments);
+
 	// Loop over each target layer and save the png
 	for (var i = 0; i < g.targetLayers.length; i++)
 	{
-		progress.increment();
-
 		// Save history state before proceeding
 		var savedState = g.doc.activeHistoryState;
 
 		// Begin by hiding all layers
-		hideAllLayers();
+		hideLayers(layersToHide);
 
 		// Make the layer visible within its hierarchy
 		showInHierarchy(g.targetLayers[i]);
 
+		// Show child layers based on user preferences
 		var children = [];
 		findChildLayers(g.targetLayers[i], children);
 
@@ -298,6 +170,7 @@ function main()
 			}
 		}
 
+		// Trim the document if enabled
 		if (g.options.trim)
 		{
 			g.doc.trim(TrimType.TRANSPARENT);
@@ -306,50 +179,95 @@ function main()
 		// Save!
 		try
 		{
-			var filename = resolveName(g.targetLayers[i]);
-			saveFile(filename, false);
+			saveFile(outputNames[i], false);
 		}
 		catch (err)
 		{
 			alert("Save error " + err);
+			break;
 		}
+
+		// Increment progress bar
+		progress.increment();
 
 		// Restore history
 		g.doc.activeHistoryState = savedState;
 	}
 
+	// Close progress bar window
 	progress.close();
 
 	// Close the duplicated document
 	g.doc.close(SaveOptions.DONOTSAVECHANGES);
 }
 
+function initialize()
+{
+	// Test if file has ever been saved
+	try
+	{
+		app.activeDocument.path;
+	}
+	catch (err)
+	{
+		alert("Script could not execute :/\n" + err);
+		return false;
+	}
+
+	// Store original document name
+	g.docName = getDocumentName(app.activeDocument);
+
+	// Get current document path
+	var fname = app.activeDocument.fullName.toString()
+	var path = fname.substring(0, fname.lastIndexOf("/"));
+
+	// Ask for folder to save images to
+	var outputPath = Folder(path).selectDlg("Select Save Folder");
+
+	if (outputPath == null)
+	{
+		return false;
+	}
+
+	g.outputPath = outputPath;
+
+	// Duplicate the active document
+	app.activeDocument = app.activeDocument.duplicate();
+
+	g.doc = app.activeDocument;
+	g.targetLayers = [];
+
+	return true;
+}
+
 // Get a list of all layers in the document
-function getAllLayers(includeAdjustmentLayers)
+function getAllLayers(includeChildren, includeAdjustmentLayers)
 {
 	var allLayers = [];
 
 	for (var i = 0; i < g.doc.layers.length; i++)
 	{
-		if (includeAdjustmentLayers || isAdjustment(g.doc.layers[i]) === false)
+		// Ignore adjustment layers
+		if (includeAdjustmentLayers === false || isAdjustment(g.doc.layers[i]) === false)
 		{
 			allLayers.push(g.doc.layers[i]);
-		}
-	}
 
-	// Find all child layers
-	var childLayers = [];
-	for (var i = 0; i < allLayers.length; i++)
-	{
-		findChildLayers(allLayers[i], childLayers);
-	}
+			// Find all child layers
+			if (includeChildren)
+			{
+				var childLayers = [];
+				findChildLayers(g.doc.layers[i], childLayers);
 
-	// Add all children to the list of layers
-	for (var i = 0; i < childLayers.length; i++)
-	{
-		if (includeAdjustmentLayers || isAdjustment(childLayers[i]) === false)
-		{
-			allLayers.push(childLayers[i]);
+				// Add all children to the list of layers
+				for (var j = 0; j < childLayers.length; j++)
+				{
+					// Ignore adjustment layers
+					if (includeAdjustmentLayers === false || isAdjustment(g.doc.layers[i]) === false)
+					{
+						allLayers.push(childLayers[j]);
+					}
+				}
+			}
 		}
 	}
 
@@ -372,11 +290,160 @@ function findChildLayers(layer, layerList)
 	}
 }
 
-// Hide all layers and groups in the document
-function hideAllLayers()
+// Removes empty groups from the targetLayers
+function filterEmptyGroups()
 {
-	var layers = getAllLayers(!g.options.adjustments);
+	for (var i = g.targetLayers.length - 1; i >= 0; i--)
+	{
+		if (isEmptyGroup(g.targetLayers[i]))
+		{
+			g.targetLayers.splice(i, 1);
+		}
+	}
+}
 
+// Remove layers from targetLayers
+function filterLayers()
+{
+	if (g.options.layers === false)
+	{
+		for (var i = g.targetLayers.length - 1; i >= 0; i--)
+		{
+			if (g.targetLayers[i].typename === "ArtLayer")
+			{
+				g.targetLayers.splice(i, 1);
+			}
+		}
+	}
+}
+
+// Remove groups for targetLayers
+function filterGroups()
+{
+	if (g.options.groups === false)
+	{
+		for (var i = g.targetLayers.length - 1; i >= 0; i--)
+		{
+			if (g.targetLayers[i].typename === "LayerSet")
+			{
+				g.targetLayers.splice(i, 1);
+			}
+		}
+	}
+}
+
+function filterLayersByColor()
+{
+	var colorOptions = [g.options.noColor, g.options.red, g.options.orange, g.options.yellow, g.options.green, g.options.blue, g.options.violet, g.options.gray];
+
+	for (var i = g.layerColors.length - 1; i >= 0; i--)
+	{
+		if (colorOptions[i] === false)
+		{
+			g.layerColors.splice(i, 1);
+		}
+	}
+
+	if (g.layerColors.length === 0)
+	{
+		g.targetLayers = [];
+	}
+
+	for (var i = g.targetLayers.length - 1; i >= 0; i--)
+	{
+		if (layerInColors(g.targetLayers[i]) === false)
+		{
+			g.targetLayers.splice(i, 1);
+		}
+	}
+}
+
+function filterHidden()
+{
+	if (g.options.hidden === false)
+	{
+		for (var i = g.targetLayers.length - 1; i >= 0; i--)
+		{
+			if (visibleInHierarchy(g.targetLayers[i]) === false)
+			{
+				g.targetLayers.splice(i, 1);
+			}
+		}
+	}
+}
+
+function filterBackground()
+{
+	for (var i = 0; i < g.targetLayers.length; i++)
+	{
+		if (g.targetLayers[i].isBackgroundLayer)
+		{
+			if (g.options.background === false)
+			{
+				g.targetLayers[i].isBackgroundLayer = false;
+				g.targetLayers[i].name = "Background";
+			}
+			else
+			{
+				g.targetLayers.splice(i, 1);
+			}
+			break;
+		}
+	}
+}
+
+function getPrefixSuffix(name)
+{
+	// Determine suffix
+	switch (name)
+	{
+		case "Space":
+			return " ";
+		case "Dash":
+			return "-";
+		case "Underscore":
+			return "_";
+		case "Period":
+			return ".";
+		default:
+			return "";
+	}
+}
+
+// Returns a list of names with the same length as g.targetLayers
+function getOutputNames()
+{
+	var names = [];
+	var nameObj = {};
+	var pad = "0000";
+
+	g.groupSuffix = getPrefixSuffix(g.options.groupSuffix); // just for safety
+
+	for (var i = 0; i < g.targetLayers.length; i++)
+	{
+		var filename = resolveName(g.targetLayers[i]);
+
+		if (nameObj.hasOwnProperty(filename) === false)
+		{
+			// the name hasn't been used yet, so add it and set count to 0
+			nameObj[filename] = 0;
+			names.push(filename);
+		}
+		else
+		{
+			// the name is already used, so increment the count
+			nameObj[filename] += 1;
+			var num = (pad + nameObj[filename]).slice(-pad.length);
+			names.push(filename + g.paddingPrefix + num);
+		}
+	}
+
+	return names;
+}
+
+// Hide all layers and groups in the document
+function hideLayers(layers)
+{
 	for (var i = 0; i < layers.length; i++)
 	{
 		if (layers[i].isBackgroundLayer === false)
@@ -546,7 +613,7 @@ function resolveName(layer)
 			var groups = "";
 			for (var i = groupNames.length - 1; i >= 0 ; i--)
 			{
-				groups += groupNames[i] + g.groupDivider;
+				groups += groupNames[i] + g.groupSuffix;
 			}
 
 			// replace groupPattern
@@ -628,7 +695,6 @@ function saveFile(filename, dryrun)
 	}
 
 	g.doc.saveAs(file, saveOptions, true);
-	return true;
 }
 
 // Show the dialog window with options
@@ -636,7 +702,10 @@ function showDialog()
 {
 	// Exit if no documents are open
 	if (app.documents.length == false)
+	{
+		alert("No documents are open");
 		return;
+	}
 
 	g.options = loadSettings();
 
@@ -665,21 +734,8 @@ function showDialog()
 	filename.preferredSize.width = 300;
 	filename.text = g.options.filename;
 
-	var groupDivider = filenamePanel.add("panel", undefined, "Group Divider", {borderStyle: "etched"});
-	groupDivider.orientation = "row";
-
-	var dividers = ["Nothing", "Space", "Dash", "Underscore", "Period"];
-	var dividerRadiobuttons = [];
-
-	for (var i = 0; i < dividers.length;i ++)
-	{
-		dividerRadiobuttons[i] = groupDivider.add("radiobutton", undefined, dividers[i]);
-		if (dividers[i] === g.options.divider)
-		{
-			dividerRadiobuttons[i].value = true;
-		}
-	}
-
+	filenamePanel.add("statictext", undefined, "You can use {doc}, {group} and {layer} in the filename.");
+	
 	// format
 	var formatPanel = leftColumn.add("panel", undefined, "File Format", {borderStyle: "etched"});
 	formatPanel.orientation = "row";
@@ -715,13 +771,99 @@ function showDialog()
 		formatRadiobuttons[0].value = true;
 	}
 
-	// help
-	var helpPanel = leftColumn.add("panel", undefined, "Notes", { borderStyle: "etched" });
-	helpPanel.orientation = "column";
-	helpPanel.alignChildren = "fill";
+	// group suffix
+	var groupSuffixPanel = leftColumn.add("panel", undefined, "Group Suffix", {borderStyle: "etched"});
+	groupSuffixPanel.orientation = "row";
+	groupSuffixPanel.alignChildren = "left";
 
-	helpPanel.add("statictext", undefined, "{doc}, {group} and {layer} can be used in the filename to insert the document name, group names and layer name.", {multiline: true});
-	helpPanel.add("statictext", undefined, "Please make sure that layers and groups have unique names, as they will otherwise overwrite each other.", {multiline: true});
+	var suffixes = ["Nothing", "Space", "Dash", "Underscore", "Period"];
+	var groupSuffixRadiobuttons = [];
+
+	for (var i = 0; i < suffixes.length;i ++)
+	{
+		groupSuffixRadiobuttons[i] = groupSuffixPanel.add("radiobutton", undefined, suffixes[i]);
+		if (suffixes[i] === g.options.groupSuffix)
+		{
+			groupSuffixRadiobuttons[i].value = true;
+		}
+	}
+
+	// padding
+	var paddingPanel = leftColumn.add("panel", undefined, "Numbering Prefix", {borderStyle: "etched"});
+	paddingPanel.orientation = "column";
+	paddingPanel.alignChildren = "fill";
+
+
+	var paddingPrefixGroup = paddingPanel.add("group");
+	paddingPrefixGroup.orientation = "row";
+
+	var paddingPrefixRadiobuttons = [];
+
+	for (var i = 0; i < suffixes.length;i ++)
+	{
+		paddingPrefixRadiobuttons[i] = paddingPrefixGroup.add("radiobutton", undefined, suffixes[i]);
+		if (suffixes[i] === g.options.groupSuffix)
+		{
+			paddingPrefixRadiobuttons[i].value = true;
+		}
+	}
+
+	paddingPanel.add("statictext", [0, 0, 0, 0], ""); // spacer
+	paddingPanel.add("statictext", undefined, "Filename clashes are resolved with 4-digit numbering.");
+	paddingPanel.add("statictext", undefined, "Warning: This does not prevent overwriting existing files!");
+
+	// sorting order
+	var sortingOrderPanel = leftColumn.add("panel", undefined, "Sorting Order", {borderStyle: "etched"});
+	sortingOrderPanel.orientation = "column";
+	sortingOrderPanel.alignChildren = "fill";
+
+	var sortingOrderRadioGroup = sortingOrderPanel.add("group");
+	sortingOrderRadioGroup.orientation = "row";
+	sortingOrderRadioGroup.alignChildren = "left";
+
+	var ascRadiobutton = sortingOrderRadioGroup.add("radiobutton", undefined, "Top to Bottom");
+	var descRadiobutton = sortingOrderRadioGroup.add("radiobutton", undefined, "Bottom to Top");
+
+	switch (g.options.sortingOrder)
+	{
+		case "ASC":
+			ascRadiobutton.value = true;
+			break;
+		case "DESC":
+			descRadiobutton.value = true;
+			break;
+		default:
+			ascRadiobutton.value = true;
+	}
+
+	sortingOrderPanel.add("statictext", [0, 0, 0, 0], ""); // spacer
+	sortingOrderPanel.add("statictext", undefined, "Sorting order is mostly relevant in case of filename clashes.");
+
+	// settings
+	var settingsPanel = rightColumn.add("panel", undefined, "Settings", { borderStyle: "etched" });
+	settingsPanel.alignChildren = "fill";
+
+	var layers = settingsPanel.add("checkbox", undefined, "Export Layers");
+	var groups = settingsPanel.add("checkbox", undefined, "Export Groups");
+	settingsRule1 = settingsPanel.add("panel"); // spacer
+	settingsRule1.minimumSize.height = settingsRule1.maximumSize.height = 1;
+	var children = settingsPanel.add("checkbox", undefined, "Child Layers");
+	var hidden = settingsPanel.add("checkbox", undefined, "Hidden Layers");
+	settingsRule2 = settingsPanel.add("panel"); // spacer
+	settingsRule2.minimumSize.height = settingsRule2.maximumSize.height = 1;
+	var background = settingsPanel.add("checkbox", undefined, "Keep Background Layer");
+	var adjustments = settingsPanel.add("checkbox", undefined, "Keep Adjustment Layers Visible");
+	settingsRule3 = settingsPanel.add("panel"); // spacer
+	settingsRule3.minimumSize.height = settingsRule3.maximumSize.height = 1;
+	var trim = settingsPanel.add("checkbox", undefined, "Trim");
+
+	hidden.value = g.options.hidden;
+	children.value = g.options.children;
+	layers.value = g.options.layers;
+	groups.value = g.options.groups;
+	background.value = g.options.background;
+	adjustments.value = g.options.adjustments;
+	trim.value = g.options.trim;
 
 	// layer colors
 	var colorPanel = rightColumn.add("panel", undefined, "Layer Colors", { borderStyle: "etched" });
@@ -756,25 +898,12 @@ function showDialog()
 	violet.value = g.options.violet;
 	gray.value = g.options.gray;
 
-	// additional settings
-	var additionalPanel = rightColumn.add("panel", undefined, "Additional Settings", { borderStyle: "etched" });
-	additionalPanel.alignChildren = "fill";
+	// verify overwrite
+	var otherPanel = rightColumn.add("panel", undefined, "Other", {borderStyle: "etched"});
+	otherPanel.alignChildren = "left";
 
-	var layers = additionalPanel.add("checkbox", undefined, "Export Layers");
-	var groups = additionalPanel.add("checkbox", undefined, "Export Groups");
-	var children = additionalPanel.add("checkbox", undefined, "Child Layers");
-	var hidden = additionalPanel.add("checkbox", undefined, "Hidden Layers");
-	var background = additionalPanel.add("checkbox", undefined, "Background Layer On All Layers");
-	var adjustments = additionalPanel.add("checkbox", undefined, "Keep Adjustment Layers Visible");
-	var trim = additionalPanel.add("checkbox", undefined, "Trim");
-
-	hidden.value = g.options.hidden;
-	children.value = g.options.children;
-	layers.value = g.options.layers;
-	groups.value = g.options.groups;
-	background.value = g.options.background;
-	adjustments.value = g.options.adjustments;
-	trim.value = g.options.trim;
+	var verifyOverwrite = otherPanel.add("checkbox", undefined, "Verify Overwrite");
+	verifyOverwrite.value = g.options.verifyOverwrite;
 
 	// buttons
 	var buttonGroup = win.add("group");
@@ -789,12 +918,22 @@ function showDialog()
 	saveButton.minimumSize = [120, 0];
 	saveButton.onClick = function()
 	{
-		var divider = "";
-		for (var i = 0; i < dividerRadiobuttons.length; i++)
+		var groupSuffix = "";
+		for (var i = 0; i < groupSuffixRadiobuttons.length; i++)
 		{
-			if (dividerRadiobuttons[i].value)
+			if (groupSuffixRadiobuttons[i].value)
 			{
-				divider = dividerRadiobuttons[i].text
+				groupSuffix = groupSuffixRadiobuttons[i].text
+				break;
+			}
+		}
+
+		var paddingPrefix = "";
+		for (var i = 0; i < paddingPrefixRadiobuttons.length; i++)
+		{
+			if (paddingPrefixRadiobuttons[i].value)
+			{
+				paddingPrefix = paddingPrefixRadiobuttons[i].text
 				break;
 			}
 		}
@@ -807,6 +946,16 @@ function showDialog()
 				format = formatRadiobuttons[i].text;
 				break;
 			}
+		}
+
+		var sortingOrder = "ASC";
+		if (ascRadiobutton.value)
+		{
+			sortingOrder = "ASC";
+		}
+		else if (descRadiobutton.value)
+		{
+			sortingOrder = "DESC";
 		}
 
 		g.options = {
@@ -827,12 +976,26 @@ function showDialog()
 			children: children.value,
 			background: background.value,
 			format: format,
-			divider: divider,
+			groupSuffix: groupSuffix,
+			paddingPrefix: paddingPrefix,
+			sortingOrder: sortingOrder,
+			verifyOverwrite: verifyOverwrite.value,
 		};
 
 		win.close();
 		saveSettings();
-		main();
+		try
+		{
+			main();
+		}
+		catch (err)
+		{
+			alert("Error line: " + err.line + "\n" + err);
+			if (g.doc !== null)
+			{
+				g.doc.close();
+			}
+		}
 	};
 
 	win.center();
@@ -846,7 +1009,7 @@ function loadSettings()
 
 	try
 	{
-		des = app.getCustomOptions(kOptions.NAME);
+		des = app.getCustomOptions(kOptions.UUID);
 	}
 	catch (err)
 	{
@@ -868,8 +1031,11 @@ function loadSettings()
 			adjustments: true,
 			children: false,
 			background: false,
+			verifyOverwrite: true,
 			format: "",
-			divider: "Nothing",
+			groupSuffix: "Underscore",
+			paddingPrefix: "Underscore",
+			sortingOrder: "ASC",
 		};
 	}
 
@@ -891,8 +1057,11 @@ function loadSettings()
 		adjustments: des.getBoolean(kOptions.ADJUSTMENTLAYER),
 		children: des.getBoolean(kOptions.CHILDREN),
 		background: des.getBoolean(kOptions.BACKGROUND),
+		verifyOverwrite: des.getBoolean(kOptions.VERIFYOVERWRITE),
 		format: des.getString(kOptions.FORMAT),
-		divider: des.getString(kOptions.GROUPDIVIDER),
+		groupSuffix: des.getString(kOptions.GROUPSUFFIX),
+		paddingPrefix: des.getString(kOptions.PADDINGPREFIX),
+		sortingOrder: des.getString(kOptions.SORTINGORDER),
 	};
 }
 
@@ -917,10 +1086,13 @@ function saveSettings()
 	des.putBoolean(kOptions.ADJUSTMENTLAYER, g.options.adjustments);
 	des.putBoolean(kOptions.CHILDREN, g.options.children);
 	des.putBoolean(kOptions.BACKGROUND, g.options.background);
+	des.putBoolean(kOptions.VERIFYOVERWRITE, g.options.verifyOverwrite);
 	des.putString(kOptions.FORMAT, g.options.format);
-	des.putString(kOptions.GROUPDIVIDER, g.options.divider);
+	des.putString(kOptions.GROUPSUFFIX, g.options.groupSuffix);
+	des.putString(kOptions.PADDINGPREFIX, g.options.paddingPrefix);
+	des.putString(kOptions.SORTINGORDER, g.options.sortingOrder);
 
-	app.putCustomOptions(kOptions.NAME, des, true);
+	app.putCustomOptions(kOptions.UUID, des, true);
 }
 
 function progress(steps)
