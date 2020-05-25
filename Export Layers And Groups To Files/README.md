@@ -15,6 +15,7 @@ Tested with Photoshop CC 2020.
 - Include hidden layers
 - Keeping adjustment layers visible
 - Trimming of layers
+- Does not export empty groups
 
 ![](ScriptUI.png)
 
@@ -34,8 +35,6 @@ Example:
 
 `Hero_{group}{layer}` would become `Hero_FaceEyes`.
 
-With the **Group Divider** set to `Underscore` the above example would output `Hero_Face_Eyes`.
-
 ### File Format
 
 The output file format. The available options are dependent on the documents bit depth.
@@ -43,12 +42,21 @@ The output file format. The available options are dependent on the documents bit
 - For 32-bit documents, only PSD and TIFF are available.
 - All formats include transparency, except for JPG files.
 - JPG files are set to a quality level of 10.
+- Photoshop and TIFF files are exported without layers.
 
-Note that Photoshop and TIFF files are exported without layers.
+### Group Suffix
 
-### Layer Colors
+Optional character that is put after each group name.
 
-Only layers and groups with the specified layer color(s) are exported. This is especially useful when mixed with the **Hidden Layers** option.
+### Numbering Prefix
+
+Optional character that is put before number. 
+
+Note: A 4-digit number is added after the filename in case of name clashes. So if the final name would be "MyLayer", the next layer with the same would be "MyLayer_0001".
+
+### Sorting Order
+
+The order layers are processed. Either from **Top to Bottom** or **Bottom to Top** as seen in Layers panel. 
 
 ### Export Layers
 
@@ -68,6 +76,10 @@ Tip: Use it together with layer colors to specify which layers/group should be e
 
 Will make hidden layers visible and export them, if they have one of selected layer colors.
 
+### Keep Background Layer
+
+If enabled, will leave the **Background** layer visible and not export it separately. Otherwise the **Background** layer is hidden and exported separately - depending on whether it is visible and other preferences, like **Layer Colors**.
+
 ### Keep Adjustment Layers Visible
 
 Will leave Adjustment Layers visible so they still affect the layers being exported. Useful to keep overall adjustment on all layers.
@@ -75,3 +87,13 @@ Will leave Adjustment Layers visible so they still affect the layers being expor
 ### Trim
 
 Trim the image (remove transparent pixels) before exporting.
+
+### Layer Colors
+
+Only layers and groups with the specified layer color(s) are exported. This is especially useful when mixed with the **Hidden Layers** option.
+
+### Verify Overwrite
+
+Performs a test run prior to saving any files, and warns you if one or more files will be overwritten.
+
+If you have many layers, and don't care about the added safety, you can disable this for a small performance gain.
