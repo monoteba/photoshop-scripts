@@ -26,7 +26,7 @@ SOFTWARE.
 
 const kOptions = 
 {
-	UUID: "53b4b8d0-c174-419a-b65e-14fd41a2ec58",
+	UUID: "be9ff78c-d1f2-4de7-899c-2dfe9358d0a1",
 	FILENAME: app.stringIDToTypeID("Filename"),
 	NOCOLOR: app.stringIDToTypeID("NoColor"),
 	RED: app.stringIDToTypeID("Red"),
