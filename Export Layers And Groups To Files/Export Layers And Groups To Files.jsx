@@ -1,3 +1,7 @@
+// todo: use global object
+// todo: make script work with unsaved documents
+// todo: enumerate layers with identical names
+
 /*
 MIT License
 
@@ -24,24 +28,38 @@ SOFTWARE.
 
 #target photoshop
 
-const kOptions = "ExportLayers_k40dpgodw"; // random characters to ensure uniqueness
-const kFilename = app.stringIDToTypeID("Filename");
-const kNoColor = app.stringIDToTypeID("NoColor");
-const kRed = app.stringIDToTypeID("Red");
-const kOrange = app.stringIDToTypeID("Orange");
-const kYellow = app.stringIDToTypeID("Yellow");
-const kGreen = app.stringIDToTypeID("Green");
-const kBlue = app.stringIDToTypeID("Blue");
-const kViolet = app.stringIDToTypeID("Violet");
-const kGray = app.stringIDToTypeID("Gray");
-const kInvisible = app.stringIDToTypeID("Invisible");
-const kLayers = app.stringIDToTypeID("Layers");
-const kGroups = app.stringIDToTypeID("Groups");
-const kTrim = app.stringIDToTypeID("Trim");
-const kAdjustments = app.stringIDToTypeID("Adjustments");
-const kChildren = app.stringIDToTypeID("Children");
-const kFormat = app.stringIDToTypeID("Format");
-const kDivider = app.stringIDToTypeID("Divider");
+const kOptions = 
+{
+	NAME: "ExportLayers_k41d8godw",
+	FILENAME: app.stringIDToTypeID("Filename"),
+	NOCOLOR: app.stringIDToTypeID("NoColor"),
+	RED: app.stringIDToTypeID("Red"),
+	ORANGE: app.stringIDToTypeID("Orange"),
+	YELLOW: app.stringIDToTypeID("Yellow"),
+	GREEN: app.stringIDToTypeID("Green"),
+	BLUE: app.stringIDToTypeID("Blue"),
+	VIOLET: app.stringIDToTypeID("Violet"),
+	GRAY: app.stringIDToTypeID("Gray"),
+	HIDDEN: app.stringIDToTypeID("Hidden"),
+	EXPORTLAYERS: app.stringIDToTypeID("ExportLayers"),
+	EXPORTGROUPS: app.stringIDToTypeID("ExportGroups"),
+	TRIM: app.stringIDToTypeID("Trim"),
+	ADJUSTMENTLAYER: app.stringIDToTypeID("AdjustmentLayer"),
+	CHILDREN: app.stringIDToTypeID("Children"),
+	FORMAT: app.stringIDToTypeID("Format"),
+	GROUPDIVIDER: app.stringIDToTypeID("GroupDivider"),
+	BACKGROUND: app.stringIDToTypeID("Background"),
+}
+
+// global object
+var g = {
+	doc: null,
+	docName: "",
+	targetLayers: [],
+	options: [],
+	outputPath: "",
+	layerColors: ["No Color", "Red", "Orange", "Yellow", "Green", "Blue", "Violet", "Gray"],
+};
 
 function main(options)
 {
@@ -79,33 +97,47 @@ function main(options)
 	var doc = app.activeDocument;
 	var targetLayers = []
 
-	// Find all top level layers
+	// Find all layers ordered by top to bottom, except adjustment layers
 	for (var i = 0; i < doc.layers.length; i++)
 	{
 		// Ignore adjustment layers
 		if (isAdjustment(doc.layers[i]) === false)
 		{
 			targetLayers.push(doc.layers[i]);
+
+			// Find all child layers
+			if (options.children)
+			{
+				var childLayers = [];
+				findChildLayers(doc.layers[i], childLayers);
+
+				// Add all children to the list of layers
+				for (var j = 0; j < childLayers.length; j++)
+				{
+					// Ignore adjustment layers
+					if (isAdjustment(childLayers[j]) === false)
+					{
+						targetLayers.push(childLayers[j]);
+					}
+				}
+			}
 		}
 	}
 
-	// Find all child layers
-	if (options.children)
+	var s = "Layers:\n";
+	for (var i = 0; i < targetLayers.length; i++)
 	{
-		var childLayers = [];
-		for (var i = 0; i < targetLayers.length; i++)
-		{
-			findChildLayers(targetLayers[i], childLayers);
-		}
+		s += targetLayers[i].name + "\n";
+	}
+	alert(s);
+	return;
 
-		// Add all children to the list of layers
-		for (var i = 0; i < childLayers.length; i++)
+	// Filter out empty groups
+	for (var i = targetLayers.length - 1; i >= 0; i--)
+	{
+		if (isEmptyGroup(targetLayers[i]))
 		{
-			// Ignore adjustment layers
-			if (isAdjustment(childLayers[i]) === false)
-			{
-				targetLayers.push(childLayers[i]);
-			}
+			targetLayers.splice(i, 1);
 		}
 	}
 
@@ -158,8 +190,8 @@ function main(options)
 		}
 	}
 
-	// Filter out invisible layers
-	if (options.invisible === false)
+	// Filter out hidden layers
+	if (options.hidden === false)
 	{
 		for (var i = targetLayers.length - 1; i >= 0; i--)
 		{
@@ -167,6 +199,24 @@ function main(options)
 			{
 				targetLayers.splice(i, 1);
 			}
+		}
+	}
+
+	// Filter out background layer
+	for (var i = 0; i < targetLayers.length; i++)
+	{
+		if (targetLayers[i].isBackgroundLayer)
+		{
+			if (options.background === false)
+			{
+				targetLayers[i].isBackgroundLayer = false;
+				targetLayers[i].name = "Background";
+			}
+			else
+			{
+				targetLayers.splice(i, 1);
+			}
+			break;
 		}
 	}
 
@@ -238,7 +288,7 @@ function main(options)
 		var children = [];
 		findChildLayers(targetLayers[i], children);
 
-		if (options.invisible === false)
+		if (options.hidden === false)
 		{
 			// Show children below in hierarchy that was previously visible
 			for (var j = 0; j < children.length; j++)
@@ -337,12 +387,15 @@ function findChildLayers(layer, layers)
 }
 
 // Hide all layers and groups in the document
-function hideAllLayers(doc, includeAdjustmentLayers)
+function hideAllLayers(doc, includeAdjustmentLayers, background)
 {
 	var layers = getAllLayers(doc, includeAdjustmentLayers);
 	for (var i = 0; i < layers.length; i++)
 	{
-		layers[i].visible = false;
+		if (layers[i].isBackgroundLayer === false)
+		{
+			layers[i].visible = false;
+		}
 	}
 }
 
@@ -439,6 +492,20 @@ function getLayerColorByID(id)
 		case "gray":
 			return "Gray";
 	}
+}
+
+// Check if a layer is an empty group
+function isEmptyGroup(layer)
+{
+	if (layer.typename === "LayerSet")
+	{
+		if (layer.layers.length == 0)
+		{
+			return true;
+		}
+	}
+
+	return false;
 }
 
 // Check if a layer is an adjustment layer
@@ -710,14 +777,16 @@ function showDialog()
 	var layers = additionalPanel.add("checkbox", undefined, "Export Layers");
 	var groups = additionalPanel.add("checkbox", undefined, "Export Groups");
 	var children = additionalPanel.add("checkbox", undefined, "Child Layers");
-	var invisible = additionalPanel.add("checkbox", undefined, "Hidden Layers (With Layer Color)");
+	var hidden = additionalPanel.add("checkbox", undefined, "Hidden Layers");
+	var background = additionalPanel.add("checkbox", undefined, "Background Layer On All Layers");
 	var adjustments = additionalPanel.add("checkbox", undefined, "Keep Adjustment Layers Visible");
 	var trim = additionalPanel.add("checkbox", undefined, "Trim");
 
-	invisible.value = settings.invisible;
+	hidden.value = settings.hidden;
 	children.value = settings.children;
 	layers.value = settings.layers;
 	groups.value = settings.groups;
+	background.value = settings.background;
 	adjustments.value = settings.adjustments;
 	trim.value = settings.trim;
 
@@ -764,12 +833,13 @@ function showDialog()
 			blue: blue.value,
 			violet: violet.value,
 			gray: gray.value,
-			invisible: invisible.value,
+			hidden: hidden.value,
 			layers: layers.value,
 			groups: groups.value,
 			trim: trim.value,
 			adjustments: adjustments.value,
 			children: children.value,
+			background: background.value,
 			format: format,
 			divider: divider,
 		};
@@ -790,7 +860,7 @@ function loadSettings()
 
 	try
 	{
-		des = app.getCustomOptions(kOptions);
+		des = app.getCustomOptions(kOptions.NAME);
 	}
 	catch (err)
 	{
@@ -805,12 +875,13 @@ function loadSettings()
 			blue: true,
 			violet: true,
 			gray: true,
-			invisible: false,
+			hidden: false,
 			layers: true,
 			groups: true,
 			trim: false,
 			adjustments: true,
 			children: false,
+			background: false,
 			format: "",
 			divider: "Nothing",
 		};
@@ -818,23 +889,24 @@ function loadSettings()
 
 	// return loaded settings
 	return {
-		filename: des.getString(kFilename),
-		noColor: des.getBoolean(kNoColor),
-		red: des.getBoolean(kRed),
-		yellow: des.getBoolean(kOrange),
-		orange: des.getBoolean(kYellow),
-		green: des.getBoolean(kGreen),
-		blue: des.getBoolean(kBlue),
-		violet: des.getBoolean(kViolet),
-		gray: des.getBoolean(kGray),
-		invisible: des.getBoolean(kInvisible),
-		layers: des.getBoolean(kLayers),
-		groups: des.getBoolean(kGroups),
-		trim: des.getBoolean(kTrim),
-		adjustments: des.getBoolean(kAdjustments),
-		children: des.getBoolean(kChildren),
-		format: des.getString(kFormat),
-		divider: des.getString(kDivider),
+		filename: des.getString(kOptions.FILENAME),
+		noColor: des.getBoolean(kOptions.NOCOLOR),
+		red: des.getBoolean(kOptions.RED),
+		yellow: des.getBoolean(kOptions.ORANGE),
+		orange: des.getBoolean(kOptions.YELLOW),
+		green: des.getBoolean(kOptions.GREEN),
+		blue: des.getBoolean(kOptions.BLUE),
+		violet: des.getBoolean(kOptions.VIOLET),
+		gray: des.getBoolean(kOptions.GRAY),
+		hidden: des.getBoolean(kOptions.HIDDEN),
+		layers: des.getBoolean(kOptions.EXPORTLAYERS),
+		groups: des.getBoolean(kOptions.EXPORTGROUPS),
+		trim: des.getBoolean(kOptions.TRIM),
+		adjustments: des.getBoolean(kOptions.ADJUSTMENTLAYER),
+		children: des.getBoolean(kOptions.CHILDREN),
+		background: des.getBoolean(kOptions.BACKGROUND),
+		format: des.getString(kOptions.FORMAT),
+		divider: des.getString(kOptions.GROUPDIVIDER),
 	};
 }
 
@@ -843,25 +915,26 @@ function saveSettings(options)
 {
 	var des = new ActionDescriptor();
 
-	des.putString(kFilename, options.filename);
-	des.putBoolean(kNoColor, options.noColor);
-	des.putBoolean(kRed, options.red);
-	des.putBoolean(kOrange, options.orange);
-	des.putBoolean(kYellow, options.yellow);
-	des.putBoolean(kGreen, options.green);
-	des.putBoolean(kBlue, options.blue);
-	des.putBoolean(kViolet, options.violet);
-	des.putBoolean(kGray, options.gray);
-	des.putBoolean(kInvisible, options.invisible);
-	des.putBoolean(kLayers, options.layers);
-	des.putBoolean(kGroups, options.groups);
-	des.putBoolean(kTrim, options.trim);
-	des.putBoolean(kAdjustments, options.adjustments);
-	des.putBoolean(kChildren, options.children);
-	des.putString(kFormat, options.format);
-	des.putString(kDivider, options.divider);
+	des.putString(kOptions.FILENAME, options.filename);
+	des.putBoolean(kOptions.NOCOLOR, options.noColor);
+	des.putBoolean(kOptions.RED, options.red);
+	des.putBoolean(kOptions.ORANGE, options.orange);
+	des.putBoolean(kOptions.YELLOW, options.yellow);
+	des.putBoolean(kOptions.GREEN, options.green);
+	des.putBoolean(kOptions.BLUE, options.blue);
+	des.putBoolean(kOptions.VIOLET, options.violet);
+	des.putBoolean(kOptions.GRAY, options.gray);
+	des.putBoolean(kOptions.HIDDEN, options.hidden);
+	des.putBoolean(kOptions.EXPORTLAYERS, options.layers);
+	des.putBoolean(kOptions.EXPORTGROUPS, options.groups);
+	des.putBoolean(kOptions.TRIM, options.trim);
+	des.putBoolean(kOptions.ADJUSTMENTLAYER, options.adjustments);
+	des.putBoolean(kOptions.CHILDREN, options.children);
+	des.putBoolean(kOptions.BACKGROUND, options.background);
+	des.putString(kOptions.FORMAT, options.format);
+	des.putString(kOptions.GROUPDIVIDER, options.divider);
 
-	app.putCustomOptions(kOptions, des, true);
+	app.putCustomOptions(kOptions.NAME, des, true);
 }
 
 function progress(steps)
@@ -885,7 +958,7 @@ function progress(steps)
 	progress.increment = function()
 	{
 		bar.value++;
-		if (bar.value % 5 === 0)
+		if (bar.value % 10 === 0)
 			app.refresh();
 	};
 
