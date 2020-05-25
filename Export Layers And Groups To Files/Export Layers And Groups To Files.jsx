@@ -1,5 +1,3 @@
-// todo: make script work with unsaved documents
-
 /*
 MIT License
 
@@ -203,23 +201,20 @@ function main()
 
 function initialize()
 {
-	// Test if file has ever been saved
-	try
-	{
-		app.activeDocument.path;
-	}
-	catch (err)
-	{
-		alert("Script could not execute :/\n" + err);
-		return false;
-	}
-
 	// Store original document name
 	g.docName = getDocumentName(app.activeDocument);
 
-	// Get current document path
-	var fname = app.activeDocument.fullName.toString()
-	var path = fname.substring(0, fname.lastIndexOf("/"));
+	// Try to get current document path
+	var path = "";
+	try
+	{
+		var fname = app.activeDocument.fullName.toString()
+		path = fname.substring(0, fname.lastIndexOf("/"));
+	} 
+	catch (err)
+	{
+		path = "";
+	}
 
 	// Ask for folder to save images to
 	var outputPath = Folder(path).selectDlg("Select Save Folder");
