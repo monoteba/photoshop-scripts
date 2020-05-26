@@ -112,6 +112,8 @@ Crops the image by surrounding transparent pixels.
 
 Only layers and groups with the specified layer color(s) are exported. This is especially useful when mixed with the **Hidden Layers** option.
 
+Note: The **Background** layer is considered to have "No Color".
+
 ### Verify Overwrite
 
 Performs a test run prior to saving any files, and warns you if one or more files will be overwritten.
