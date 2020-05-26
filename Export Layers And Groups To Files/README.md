@@ -46,7 +46,7 @@ The output file format. The available options are dependent on the documents bit
 - GIF files uses the "Local Selective" palette type and diffusion type dithering.
 
 | Color Mode and Bit Depth | PNG  | JPG  | GIF  | TIFF | PSD  | PDF  |
-| :---                     | :--- | :--- | :--- | :--- | :--- | :--- |
+| :---                     | :--: | :--: | :--: | :--: | :--: | :--: |
 | RGB 8-bit                | X    | X    | X    | X    | X    | X    |
 | RGB 16-bit               | X    | X    |      | X    | X    | X    |
 | RGB 32-bit               |      |      |      | X    | X    |      |
