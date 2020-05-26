@@ -35,9 +35,9 @@ Example:
 
 `Hero_{group}{layer}` would become `Hero_FaceEyes`.
 
-### File Format
+#### File Format
 
-The output file format. The available options are dependent on the documents bit depth and color mode.
+The formats available are dependent on the documents bit depth and color mode.
 
 - All formats include transparency, except for JPG and PDF files.
 - JPG files are set to a quality level of 10.
