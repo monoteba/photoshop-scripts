@@ -26,7 +26,7 @@ SOFTWARE.
 
 const kOptions = 
 {
-	UUID: "be9ff78c-d1f2-4de7-899c-2dfe9358d0a1",
+	UUID: "7d872db6-52b1-42ef-8312-a746478a6a8b",
 	FILENAME: app.stringIDToTypeID("Filename"),
 	NOCOLOR: app.stringIDToTypeID("NoColor"),
 	RED: app.stringIDToTypeID("Red"),
@@ -41,6 +41,7 @@ const kOptions =
 	EXPORTGROUPS: app.stringIDToTypeID("ExportGroups"),
 	TRIM: app.stringIDToTypeID("Trim"),
 	ADJUSTMENTLAYER: app.stringIDToTypeID("AdjustmentLayer"),
+	LOCKED: app.stringIDToTypeID("Locked"),
 	CHILDREN: app.stringIDToTypeID("Children"),
 	FORMAT: app.stringIDToTypeID("Format"),
 	GROUPSUFFIX: app.stringIDToTypeID("GroupSuffix"),
@@ -441,7 +442,9 @@ function hideLayers(layers)
 {
 	for (var i = 0; i < layers.length; i++)
 	{
-		if (layers[i].isBackgroundLayer === false)
+		var locked = (g.options.locked && layers[i].pixelsLocked);
+
+		if (layers[i].isBackgroundLayer === false && locked === false)
 		{
 			layers[i].visible = false;
 		}
@@ -637,11 +640,17 @@ function saveFile(filename, dryrun)
 		case "JPG":
 			ext = "jpg";
 			break;
+		case "GIF":
+			ext = "gif";
+			break;
 		case "TIFF":
 			ext = "tif";
 			break;
 		case "PSD":
 			ext = "psd";
+			break;
+		case "PDF":
+			ext = "pdf";
 			break;
 	}
 
@@ -652,7 +661,7 @@ function saveFile(filename, dryrun)
 	{
 		if (file.exists)
 		{
-			return confirm("One or more files already exists. Do you want to overwrite them?", true, "Overwrite Existing?");
+			return confirm("One or more files already exists and will be overwritten!\nDo you want to continue?", true, "Overwrite Existing?");
 		}
 
 		return;
@@ -672,6 +681,10 @@ function saveFile(filename, dryrun)
 			saveOptions.quality = 10;
 			saveOptions.formatOptions = FormatOptions.STANDARDBASELINE;
 			break;
+		case "GIF":
+			saveOptions = new GIFSaveOptions();
+			saveOptions.transparency = true;
+			break;
 		case "TIFF":
 			saveOptions = new TiffSaveOptions();
 			saveOptions.byteOrder = ByteOrder.IBM;
@@ -687,6 +700,14 @@ function saveFile(filename, dryrun)
 			saveOptions.embedColorProfile = true;
 			saveOptions.layers = false;
 			break;
+		case "PDF":
+			saveOptions = new PDFSaveOptions();
+			saveOptions.alphaChannels = false;
+			saveOptions.embedColorProfile = true;
+			saveOptions.jpegQuality = 10;
+			saveOptions.layers = false;
+			saveOptions.preserveEditing = false;
+			saveOptions.optimizeForWeb = true;
 	}
 
 	g.doc.saveAs(file, saveOptions, true);
@@ -736,17 +757,50 @@ function showDialog()
 	formatPanel.orientation = "row";
 	formatPanel.alignChildren = "left";
 
-	switch (app.activeDocument.bitsPerChannel)
+	// Document Color Mode
+	var documentMode = app.activeDocument.mode;
+	if (documentMode === DocumentMode.BITMAP || documentMode === DocumentMode.INDEXEDCOLOR)
 	{
-		case BitsPerChannelType.EIGHT:
-			var formats = ["PNG", "JPG", "TIFF", "PSD"];
-			break;
-		case BitsPerChannelType.SIXTEEN:
-			var formats = ["PNG", "JPG", "TIFF", "PSD"];
-			break;
-		case BitsPerChannelType.THIRTYTWO:
-			var formats = ["TIFF", "PSD"];
-			break;
+		var formats = ["PNG", "JPG", "GIF", "TIFF", "PSD", "PDF"];
+	}
+	else if (documentMode === DocumentMode.RGB || documentMode === DocumentMode.GRAYSCALE)
+	{
+		switch (app.activeDocument.bitsPerChannel)
+		{
+			case BitsPerChannelType.EIGHT:
+				var formats = ["PNG", "JPG", "GIF", "TIFF", "PSD", "PDF"];
+				break;
+			case BitsPerChannelType.SIXTEEN:
+				var formats = ["PNG", "JPG", "TIFF", "PSD", "PDF"];
+				break;
+			case BitsPerChannelType.THIRTYTWO:
+				var formats = ["TIFF", "PSD"];
+				break;
+		}
+	} 
+	else if (documentMode === DocumentMode.CMYK)
+	{
+		switch (app.activeDocument.bitsPerChannel)
+		{
+			case BitsPerChannelType.EIGHT:
+				var formats = ["JPG", "TIFF", "PSD", "PDF"];
+				break;
+			case BitsPerChannelType.SIXTEEN:
+				var formats = ["JPG", "TIFF", "PSD", "PDF"];
+				break;
+		}
+	}
+	else if (documentMode === DocumentMode.LAB)
+	{
+		switch (app.activeDocument.bitsPerChannel)
+		{
+			case BitsPerChannelType.EIGHT:
+				var formats = ["TIFF", "PSD", "PDF"];
+				break;
+			case BitsPerChannelType.SIXTEEN:
+				var formats = ["TIFF", "PSD", "PDF"];
+				break;
+		}
 	}
 
 	var formatRadiobuttons = [];
@@ -848,6 +902,7 @@ function showDialog()
 	settingsRule2.minimumSize.height = settingsRule2.maximumSize.height = 1;
 	var background = settingsPanel.add("checkbox", undefined, "Keep Background Layer");
 	var adjustments = settingsPanel.add("checkbox", undefined, "Keep Adjustment Layers Visible");
+	var locked = settingsPanel.add("checkbox", undefined, "Keep Pixel Locked Layers Visible");
 	settingsRule3 = settingsPanel.add("panel"); // spacer
 	settingsRule3.minimumSize.height = settingsRule3.maximumSize.height = 1;
 	var trim = settingsPanel.add("checkbox", undefined, "Trim");
@@ -858,6 +913,7 @@ function showDialog()
 	groups.value = g.options.groups;
 	background.value = g.options.background;
 	adjustments.value = g.options.adjustments;
+	locked.value = g.options.locked;
 	trim.value = g.options.trim;
 
 	// layer colors
@@ -968,6 +1024,7 @@ function showDialog()
 			groups: groups.value,
 			trim: trim.value,
 			adjustments: adjustments.value,
+			locked: locked.value,
 			children: children.value,
 			background: background.value,
 			format: format,
@@ -988,7 +1045,7 @@ function showDialog()
 			alert("Error line: " + err.line + "\n" + err);
 			if (g.doc !== null)
 			{
-				g.doc.close();
+				g.doc.close(SaveOptions.DONOTSAVECHANGES);
 			}
 		}
 	};
@@ -1024,6 +1081,7 @@ function loadSettings()
 			groups: true,
 			trim: false,
 			adjustments: true,
+			locked: false,
 			children: false,
 			background: false,
 			verifyOverwrite: true,
@@ -1050,6 +1108,7 @@ function loadSettings()
 		groups: des.getBoolean(kOptions.EXPORTGROUPS),
 		trim: des.getBoolean(kOptions.TRIM),
 		adjustments: des.getBoolean(kOptions.ADJUSTMENTLAYER),
+		locked: des.getBoolean(kOptions.LOCKED),
 		children: des.getBoolean(kOptions.CHILDREN),
 		background: des.getBoolean(kOptions.BACKGROUND),
 		verifyOverwrite: des.getBoolean(kOptions.VERIFYOVERWRITE),
@@ -1079,6 +1138,7 @@ function saveSettings()
 	des.putBoolean(kOptions.EXPORTGROUPS, g.options.groups);
 	des.putBoolean(kOptions.TRIM, g.options.trim);
 	des.putBoolean(kOptions.ADJUSTMENTLAYER, g.options.adjustments);
+	des.putBoolean(kOptions.LOCKED, g.options.locked);
 	des.putBoolean(kOptions.CHILDREN, g.options.children);
 	des.putBoolean(kOptions.BACKGROUND, g.options.background);
 	des.putBoolean(kOptions.VERIFYOVERWRITE, g.options.verifyOverwrite);
