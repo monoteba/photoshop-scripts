@@ -28,7 +28,7 @@ The filename is defined as a mix of a custom name together with tags that insert
 | Tag | Replacement |
 | :--- | :--- |
 | `{doc}` | Inserts the document name into the filename |
-| `{group}` | Inserts the name(s) of the parent groups, divided by the **Group Divider** |
+| `{group}` | Inserts the name(s) of the parent groups, divided by the **Group Suffix** |
 | `{layer}` | Inserts the layer or group name that is currently being exported |
 
 Example: 
@@ -37,12 +37,28 @@ Example:
 
 ### File Format
 
-The output file format. The available options are dependent on the documents bit depth.
+The output file format. The available options are dependent on the documents bit depth and color mode.
 
-- For 32-bit documents, only PSD and TIFF are available.
-- All formats include transparency, except for JPG files.
+- All formats include transparency, except for JPG and PDF files.
 - JPG files are set to a quality level of 10.
 - Photoshop and TIFF files are exported without layers.
+- PDF files don't downsample and are saved with a JPG quality level of 10.
+- GIF files uses the "Local Selective" palette type and diffusion type dithering.
+
+| Color Mode and Bit Depth | PNG  | JPG  | GIF  | TIFF | PSD  | PDF  |
+| :---                     | :--: | :--: | :--: | :--: | :--: | :--: |
+| RGB 8-bit                | X    | X    | X    | X    | X    | X    |
+| RGB 16-bit               | X    | X    |      | X    | X    | X    |
+| RGB 32-bit               |      |      |      | X    | X    |      |
+| CMYK 8-bit               |      | X    |      | X    | X    | X    |
+| CMYK 16-bit              |      | X    |      | X    | X    | X    |
+| LAB 8-bit                |      |      |      | X    | X    | X    |
+| LAB 16-bit               |      |      |      | X    | X    | X    |
+| Grayscale 8-bit          | X    | X    | X    | X    | X    | X    |
+| Grayscale 16-bit         | X    | X    |      | X    | X    | X    |
+| Grayscale 32-bit         |      |      |      | X    | X    |      |
+| Indexed Color            | X    |      | X    | X    | X    | X    |
+| Bitmap                   | X    |      | X    | X    | X    | X    |
 
 ### Group Suffix
 
@@ -82,11 +98,15 @@ If enabled, will leave the **Background** layer visible and not export it separa
 
 ### Keep Adjustment Layers Visible
 
-Will leave Adjustment Layers visible so they still affect the layers being exported. Useful to keep overall adjustment on all layers.
+Keeps **Adjustment Layers** visible so they still affect the layers being exported. Useful to keep overall adjustment on all layers.
+
+### Keep Pixel Locked Layers Visible
+
+Keeps **Pixel Locked** (including generally locked) layers visible on all exported layers. This is, for example, useful if you have a watermark that you want to remain visible on each exported layer.
 
 ### Trim
 
-Trim the image (remove transparent pixels) before exporting.
+Crops the image by surrounding transparent pixels.
 
 ### Layer Colors
 
