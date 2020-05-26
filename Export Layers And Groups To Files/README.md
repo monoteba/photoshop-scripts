@@ -39,12 +39,26 @@ Example:
 
 The output file format. The available options are dependent on the documents bit depth and color mode.
 
-- For 32-bit documents, only PSD and TIFF are available.
 - All formats include transparency, except for JPG and PDF files.
 - JPG files are set to a quality level of 10.
 - Photoshop and TIFF files are exported without layers.
 - PDF files don't downsample and are saved with a JPG quality level of 10.
 - GIF files uses the "Local Selective" palette type and diffusion type dithering.
+
+| Color Mode and Bit Depth | PNG  | JPG  | GIF  | TIFF | PSD  | PDF  |
+| :---                     | :--- | :--- | :--- | :--- | :--- | :--- |
+| RGB 8-bit                | X    | X    | X    | X    | X    | X    |
+| RGB 16-bit               | X    | X    |      | X    | X    | X    |
+| RGB 32-bit               |      |      |      | X    | X    |      |
+| CMYK 8-bit               |      | X    |      | X    | X    | X    |
+| CMYK 16-bit              |      | X    |      | X    | X    | X    |
+| LAB 8-bit                |      |      |      | X    | X    | X    |
+| LAB 16-bit               |      |      |      | X    | X    | X    |
+| Grayscale 8-bit          | X    | X    | X    | X    | X    | X    |
+| Grayscale 16-bit         | X    | X    |      | X    | X    | X    |
+| Grayscale 32-bit         |      |      |      | X    | X    |      |
+| Indexed Color            | X    |      | X    | X    | X    | X    |
+| Bitmap                   | X    |      | X    | X    | X    | X    |
 
 ### Group Suffix
 
