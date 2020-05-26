@@ -82,7 +82,11 @@ If enabled, will leave the **Background** layer visible and not export it separa
 
 ### Keep Adjustment Layers Visible
 
-Will leave Adjustment Layers visible so they still affect the layers being exported. Useful to keep overall adjustment on all layers.
+Keeps **Adjustment Layers** visible so they still affect the layers being exported. Useful to keep overall adjustment on all layers.
+
+### Keep Pixel Locked Layers Visible
+
+Keeps **Pixel Locked** (including generally locked) layers visible on all exported layers. This is, for example, useful if you have a watermark that you want to remain visible on each exported layer.
 
 ### Trim
 
