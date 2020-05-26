@@ -106,7 +106,7 @@ Keeps **Pixel Locked** (including generally locked) layers visible on all export
 
 ### Trim
 
-Trim the image (remove transparent pixels) before exporting.
+Crops the image by surrounding transparent pixels.
 
 ### Layer Colors
 
