@@ -37,12 +37,14 @@ Example:
 
 ### File Format
 
-The output file format. The available options are dependent on the documents bit depth.
+The output file format. The available options are dependent on the documents bit depth and color mode.
 
 - For 32-bit documents, only PSD and TIFF are available.
-- All formats include transparency, except for JPG files.
+- All formats include transparency, except for JPG and PDF files.
 - JPG files are set to a quality level of 10.
 - Photoshop and TIFF files are exported without layers.
+- PDF files don't downsample and are saved with a JPG quality level of 10.
+- GIF files uses the "Local Selective" palette type and diffusion type dithering.
 
 ### Group Suffix
 
