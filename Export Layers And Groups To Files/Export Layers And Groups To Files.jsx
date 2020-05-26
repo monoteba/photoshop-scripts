@@ -761,7 +761,7 @@ function showDialog()
 	var documentMode = app.activeDocument.mode;
 	if (documentMode === DocumentMode.BITMAP || documentMode === DocumentMode.INDEXEDCOLOR)
 	{
-		var formats = ["PNG", "JPG", "GIF", "TIFF", "PSD", "PDF"];
+		var formats = ["PNG", "GIF", "TIFF", "PSD", "PDF"];
 	}
 	else if (documentMode === DocumentMode.RGB || documentMode === DocumentMode.GRAYSCALE)
 	{
