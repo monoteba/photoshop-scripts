@@ -28,7 +28,7 @@ The filename is defined as a mix of a custom name together with tags that insert
 | Tag | Replacement |
 | :--- | :--- |
 | `{doc}` | Inserts the document name into the filename |
-| `{group}` | Inserts the name(s) of the parent groups, divided by the **Group Divider** |
+| `{group}` | Inserts the name(s) of the parent groups, divided by the **Group Suffix** |
 | `{layer}` | Inserts the layer or group name that is currently being exported |
 
 Example: 
