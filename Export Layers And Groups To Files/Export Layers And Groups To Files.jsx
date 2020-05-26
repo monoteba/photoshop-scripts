@@ -490,9 +490,19 @@ function visibleInHierarchy(layer)
 // Determine if a given layer is in an array of color tags
 function layerInColors(layer)
 {
+	// background layer cannot have a color
+	if (layer.isBackgroundLayer)
+	{
+		var color = "No Color";
+	}
+	else
+	{
+		var color = getLayerColorByID(layer.id);
+	}
+
 	for (var j = 0; j < g.layerColors.length; j++)
 	{
-		if (getLayerColorByID(layer.id) === g.layerColors[j])
+		if (color === g.layerColors[j])
 		{
 			return true;
 		}
@@ -631,31 +641,8 @@ function resolveName(layer)
 // The function can do a dry run, where no files are saved
 function saveFile(filename, dryrun)
 {
-	var ext = "";
-	switch (g.options.format)
-	{
-		case "PNG":
-			ext = "png";
-			break;
-		case "JPG":
-			ext = "jpg";
-			break;
-		case "GIF":
-			ext = "gif";
-			break;
-		case "TIFF":
-			ext = "tif";
-			break;
-		case "PSD":
-			ext = "psd";
-			break;
-		case "PDF":
-			ext = "pdf";
-			break;
-	}
-
 	// Create new file object
-	var file = new File(g.outputPath + "/" + filename + "." + ext);
+	var file = new File(g.outputPath + "/" + filename + g.options.format);
 
 	if (dryrun)
 	{
@@ -670,22 +657,22 @@ function saveFile(filename, dryrun)
 	var saveOptions = undefined;
 	switch (g.options.format)
 	{
-		case "PNG":
+		case ".png":
 			saveOptions = new PNGSaveOptions();
-			saveOptions.compression = 5; // 0-9
+			saveOptions.compression = 3; // 0-9
 			saveOptions.interlaced = false;
 			break;
-		case "JPG":
+		case ".jpg":
 			saveOptions = new JPEGSaveOptions();
 			saveOptions.embedColorProfile = true;
 			saveOptions.quality = 10;
 			saveOptions.formatOptions = FormatOptions.STANDARDBASELINE;
 			break;
-		case "GIF":
+		case ".gif":
 			saveOptions = new GIFSaveOptions();
 			saveOptions.transparency = true;
 			break;
-		case "TIFF":
+		case ".tif":
 			saveOptions = new TiffSaveOptions();
 			saveOptions.byteOrder = ByteOrder.IBM;
 			saveOptions.embedColorProfile = true;
@@ -694,13 +681,13 @@ function saveFile(filename, dryrun)
 			saveOptions.layers = false;
 			saveOptions.transparency = true;
 			break;
-		case "PSD":
+		case ".psd":
 			saveOptions = new PhotoshopSaveOptions();
 			saveOptions.alphaChannels = true;
 			saveOptions.embedColorProfile = true;
 			saveOptions.layers = false;
 			break;
-		case "PDF":
+		case ".pdf":
 			saveOptions = new PDFSaveOptions();
 			saveOptions.alphaChannels = false;
 			saveOptions.embedColorProfile = true;
@@ -729,108 +716,57 @@ function showDialog()
 	win.orientation = "column";
 	win.alignChildren = "fill";
 
-	var wrapper = win.add("group");
-	wrapper.orientation = "row";
-	wrapper.alignChildren = "top";
+	win.wrapper = win.add("group");
+	win.wrapper.orientation = "row";
+	win.wrapper.alignChildren = "top";
 
-	var leftColumn = wrapper.add("group");
-	leftColumn.orientation = "column";
-	leftColumn.alignChildren = "fill";
+	win.left = win.wrapper.add("group");
+	win.left.orientation = "column";
+	win.left.alignChildren = "fill";
 
-	var rightColumn = wrapper.add("group");
-	rightColumn.orientation = "column";
-	rightColumn.alignChildren = "fill";
+	win.right = win.wrapper.add("group");
+	win.right.orientation = "column";
+	win.right.alignChildren = "fill";
 
-	// filename
-	var filenamePanel = leftColumn.add("panel", undefined, "Filename", {borderStyle: "etched"});
-	filenamePanel.orientation = "column";
-	filenamePanel.alignChildren = "fill";
+	// filename and format
+	win.left.filename = win.left.add("panel", undefined, "Filename", {borderStyle: "etched"});
+	win.left.filename.orientation = "column";
+	win.left.filename.alignChildren = "fill";
 
-	var filename = filenamePanel.add("edittext");
+	win.left.filename.group = win.left.filename.add("group");
+	win.left.filename.group.orientation = "row";
+	win.left.filename.group.alignChildren = "fill";
+
+	var filename = win.left.filename.group.add("edittext");
 	filename.preferredSize.width = 300;
 	filename.text = g.options.filename;
 
-	filenamePanel.add("statictext", undefined, "You can use {doc}, {group} and {layer} in the filename.");
-	
-	// format
-	var formatPanel = leftColumn.add("panel", undefined, "File Format", {borderStyle: "etched"});
-	formatPanel.orientation = "row";
-	formatPanel.alignChildren = "left";
+	var formats = getFormats();
+	var format = win.left.filename.group.add("dropdownlist", undefined, formats);
+	format.preferredSize.width = 100;
 
-	// Document Color Mode
-	var documentMode = app.activeDocument.mode;
-	if (documentMode === DocumentMode.BITMAP || documentMode === DocumentMode.INDEXEDCOLOR)
-	{
-		var formats = ["PNG", "GIF", "TIFF", "PSD", "PDF"];
-	}
-	else if (documentMode === DocumentMode.RGB || documentMode === DocumentMode.GRAYSCALE)
-	{
-		switch (app.activeDocument.bitsPerChannel)
-		{
-			case BitsPerChannelType.EIGHT:
-				var formats = ["PNG", "JPG", "GIF", "TIFF", "PSD", "PDF"];
-				break;
-			case BitsPerChannelType.SIXTEEN:
-				var formats = ["PNG", "JPG", "TIFF", "PSD", "PDF"];
-				break;
-			case BitsPerChannelType.THIRTYTWO:
-				var formats = ["TIFF", "PSD"];
-				break;
-		}
-	} 
-	else if (documentMode === DocumentMode.CMYK)
-	{
-		switch (app.activeDocument.bitsPerChannel)
-		{
-			case BitsPerChannelType.EIGHT:
-				var formats = ["JPG", "TIFF", "PSD", "PDF"];
-				break;
-			case BitsPerChannelType.SIXTEEN:
-				var formats = ["JPG", "TIFF", "PSD", "PDF"];
-				break;
-		}
-	}
-	else if (documentMode === DocumentMode.LAB)
-	{
-		switch (app.activeDocument.bitsPerChannel)
-		{
-			case BitsPerChannelType.EIGHT:
-				var formats = ["TIFF", "PSD", "PDF"];
-				break;
-			case BitsPerChannelType.SIXTEEN:
-				var formats = ["TIFF", "PSD", "PDF"];
-				break;
-		}
-	}
-
-	var formatRadiobuttons = [];
-	var formatSet = false;
+	format.selection = 0;
 	for (var i = 0; i < formats.length; i++)
 	{
-		formatRadiobuttons.push(formatPanel.add("radiobutton", undefined, formats[i]));
 		if (formats[i] === g.options.format)
 		{
-			formatRadiobuttons[i].value = true;
-			formatSet = true;
+			format.selection = i;
 		}
 	}
 
-	if (formatSet === false)
-	{
-		formatRadiobuttons[0].value = true;
-	}
+	win.left.filename.add("statictext", undefined, "You can use {doc}, {group} and {layer} in the filename.");
 
 	// group suffix
-	var groupSuffixPanel = leftColumn.add("panel", undefined, "Group Suffix", {borderStyle: "etched"});
-	groupSuffixPanel.orientation = "row";
-	groupSuffixPanel.alignChildren = "left";
+	win.left.groupSuffix = win.left.add("panel", undefined, "Group Suffix", {borderStyle: "etched"});
+	win.left.groupSuffix.orientation = "row";
+	win.left.groupSuffix.alignChildren = "left";
 
 	var suffixes = ["Nothing", "Space", "Dash", "Underscore", "Period"];
 	var groupSuffixRadiobuttons = [];
 
 	for (var i = 0; i < suffixes.length;i ++)
 	{
-		groupSuffixRadiobuttons[i] = groupSuffixPanel.add("radiobutton", undefined, suffixes[i]);
+		groupSuffixRadiobuttons[i] = win.left.groupSuffix.add("radiobutton", undefined, suffixes[i]);
 		if (suffixes[i] === g.options.groupSuffix)
 		{
 			groupSuffixRadiobuttons[i].value = true;
@@ -838,40 +774,39 @@ function showDialog()
 	}
 
 	// padding
-	var paddingPanel = leftColumn.add("panel", undefined, "Numbering Prefix", {borderStyle: "etched"});
-	paddingPanel.orientation = "column";
-	paddingPanel.alignChildren = "fill";
+	win.left.numberingPrefix = win.left.add("panel", undefined, "Numbering Prefix", {borderStyle: "etched"});
+	win.left.numberingPrefix.orientation = "column";
+	win.left.numberingPrefix.alignChildren = "fill";
 
-
-	var paddingPrefixGroup = paddingPanel.add("group");
-	paddingPrefixGroup.orientation = "row";
+	win.left.numberingPrefix.group = win.left.numberingPrefix.add("group");
+	win.left.numberingPrefix.group.orientation = "row";
 
 	var paddingPrefixRadiobuttons = [];
 
 	for (var i = 0; i < suffixes.length;i ++)
 	{
-		paddingPrefixRadiobuttons[i] = paddingPrefixGroup.add("radiobutton", undefined, suffixes[i]);
+		paddingPrefixRadiobuttons[i] = win.left.numberingPrefix.group.add("radiobutton", undefined, suffixes[i]);
 		if (suffixes[i] === g.options.groupSuffix)
 		{
 			paddingPrefixRadiobuttons[i].value = true;
 		}
 	}
 
-	paddingPanel.add("statictext", [0, 0, 0, 0], ""); // spacer
-	paddingPanel.add("statictext", undefined, "Filename clashes are resolved with 4-digit numbering.");
-	paddingPanel.add("statictext", undefined, "Warning: This does not prevent overwriting existing files!");
+	win.left.numberingPrefix.add("statictext", [0, 0, 0, 0], ""); // spacer
+	win.left.numberingPrefix.add("statictext", undefined, "Filename clashes are resolved with 4-digit numbering.");
+	win.left.numberingPrefix.add("statictext", undefined, "Warning: This does not prevent overwriting existing files!");
 
 	// sorting order
-	var sortingOrderPanel = leftColumn.add("panel", undefined, "Sorting Order", {borderStyle: "etched"});
-	sortingOrderPanel.orientation = "column";
-	sortingOrderPanel.alignChildren = "fill";
+	win.left.sortingOrder = win.left.add("panel", undefined, "Sorting Order", {borderStyle: "etched"});
+	win.left.sortingOrder.orientation = "column";
+	win.left.sortingOrder.alignChildren = "fill";
 
-	var sortingOrderRadioGroup = sortingOrderPanel.add("group");
-	sortingOrderRadioGroup.orientation = "row";
-	sortingOrderRadioGroup.alignChildren = "left";
+	win.left.sortingOrder.group = win.left.sortingOrder.add("group");
+	win.left.sortingOrder.group.orientation = "row";
+	win.left.sortingOrder.group.alignChildren = "left";
 
-	var ascRadiobutton = sortingOrderRadioGroup.add("radiobutton", undefined, "Top to Bottom");
-	var descRadiobutton = sortingOrderRadioGroup.add("radiobutton", undefined, "Bottom to Top");
+	var ascRadiobutton = win.left.sortingOrder.group.add("radiobutton", undefined, "Top to Bottom");
+	var descRadiobutton = win.left.sortingOrder.group.add("radiobutton", undefined, "Bottom to Top");
 
 	switch (g.options.sortingOrder)
 	{
@@ -885,27 +820,27 @@ function showDialog()
 			ascRadiobutton.value = true;
 	}
 
-	sortingOrderPanel.add("statictext", [0, 0, 0, 0], ""); // spacer
-	sortingOrderPanel.add("statictext", undefined, "Sorting order is mostly relevant in case of filename clashes.");
+	win.left.sortingOrder.add("statictext", [0, 0, 0, 0], ""); // spacer
+	win.left.sortingOrder.add("statictext", undefined, "Sorting order is mostly relevant in case of filename clashes.");
 
 	// settings
-	var settingsPanel = rightColumn.add("panel", undefined, "Settings", { borderStyle: "etched" });
-	settingsPanel.alignChildren = "fill";
+	win.right.settings = win.right.add("panel", undefined, "Settings", { borderStyle: "etched" });
+	win.right.settings.alignChildren = "fill";
 
-	var layers = settingsPanel.add("checkbox", undefined, "Export Layers");
-	var groups = settingsPanel.add("checkbox", undefined, "Export Groups");
-	settingsRule1 = settingsPanel.add("panel"); // spacer
+	var layers = win.right.settings.add("checkbox", undefined, "Export Layers");
+	var groups = win.right.settings.add("checkbox", undefined, "Export Groups");
+	settingsRule1 = win.right.settings.add("panel"); // spacer
 	settingsRule1.minimumSize.height = settingsRule1.maximumSize.height = 1;
-	var children = settingsPanel.add("checkbox", undefined, "Child Layers");
-	var hidden = settingsPanel.add("checkbox", undefined, "Hidden Layers");
-	settingsRule2 = settingsPanel.add("panel"); // spacer
+	var children = win.right.settings.add("checkbox", undefined, "Child Layers");
+	var hidden = win.right.settings.add("checkbox", undefined, "Hidden Layers");
+	settingsRule2 = win.right.settings.add("panel"); // spacer
 	settingsRule2.minimumSize.height = settingsRule2.maximumSize.height = 1;
-	var background = settingsPanel.add("checkbox", undefined, "Keep Background Layer");
-	var adjustments = settingsPanel.add("checkbox", undefined, "Keep Adjustment Layers Visible");
-	var locked = settingsPanel.add("checkbox", undefined, "Keep Pixel Locked Layers Visible");
-	settingsRule3 = settingsPanel.add("panel"); // spacer
+	var background = win.right.settings.add("checkbox", undefined, "Keep Background Layer");
+	var adjustments = win.right.settings.add("checkbox", undefined, "Keep Adjustment Layers Visible");
+	var locked = win.right.settings.add("checkbox", undefined, "Keep Pixel Locked Layers Visible");
+	settingsRule3 = win.right.settings.add("panel"); // spacer
 	settingsRule3.minimumSize.height = settingsRule3.maximumSize.height = 1;
-	var trim = settingsPanel.add("checkbox", undefined, "Trim");
+	var trim = win.right.settings.add("checkbox", undefined, "Trim");
 
 	hidden.value = g.options.hidden;
 	children.value = g.options.children;
@@ -917,28 +852,28 @@ function showDialog()
 	trim.value = g.options.trim;
 
 	// layer colors
-	var colorPanel = rightColumn.add("panel", undefined, "Layer Colors", { borderStyle: "etched" });
-	colorPanel.orientation = "row";
-	colorPanel.alignChildren = "top";
+	win.right.layerColors = win.right.add("panel", undefined, "Layer Colors", { borderStyle: "etched" });
+	win.right.layerColors.orientation = "row";
+	win.right.layerColors.alignChildren = "top";
 
-	var colorGroup1 = colorPanel.add("group");
-	colorGroup1.orientation = "column";
-	colorGroup1.alignChildren = "left";
-	colorGroup1.minimumSize = [120, 0];
+	win.right.layerColors.group1 = win.right.layerColors.add("group");
+	win.right.layerColors.group1.orientation = "column";
+	win.right.layerColors.group1.alignChildren = "left";
+	win.right.layerColors.group1.minimumSize = [120, 0];
 
-	var colorGroup2 = colorPanel.add("group");
-	colorGroup2.orientation = "column";
-	colorGroup2.alignChildren = "left";
-	colorGroup2.minimumSize = [120, 0];
+	win.right.layerColors.group2 = win.right.layerColors.add("group");
+	win.right.layerColors.group2.orientation = "column";
+	win.right.layerColors.group2.alignChildren = "left";
+	win.right.layerColors.group2.minimumSize = [120, 0];
 
-	var noColor = colorGroup1.add("checkbox", undefined, "No Color");
-	var red = colorGroup1.add("checkbox", undefined, "Red");
-	var yellow = colorGroup1.add("checkbox", undefined, "Yellow");
-	var orange = colorGroup1.add("checkbox", undefined, "Orange");
-	var green = colorGroup2.add("checkbox", undefined, "Green");
-	var blue = colorGroup2.add("checkbox", undefined, "Blue");
-	var violet = colorGroup2.add("checkbox", undefined, "Violet");
-	var gray = colorGroup2.add("checkbox", undefined, "Gray");
+	var noColor = win.right.layerColors.group1.add("checkbox", undefined, "No Color");
+	var red = win.right.layerColors.group1.add("checkbox", undefined, "Red");
+	var yellow = win.right.layerColors.group1.add("checkbox", undefined, "Yellow");
+	var orange = win.right.layerColors.group1.add("checkbox", undefined, "Orange");
+	var green = win.right.layerColors.group2.add("checkbox", undefined, "Green");
+	var blue = win.right.layerColors.group2.add("checkbox", undefined, "Blue");
+	var violet = win.right.layerColors.group2.add("checkbox", undefined, "Violet");
+	var gray = win.right.layerColors.group2.add("checkbox", undefined, "Gray");
 
 	noColor.value = g.options.noColor;
 	red.value = g.options.red;
@@ -950,10 +885,10 @@ function showDialog()
 	gray.value = g.options.gray;
 
 	// verify overwrite
-	var otherPanel = rightColumn.add("panel", undefined, "Other", {borderStyle: "etched"});
-	otherPanel.alignChildren = "left";
+	win.right.other = win.right.add("panel", undefined, "Other", {borderStyle: "etched"});
+	win.right.other.alignChildren = "left";
 
-	var verifyOverwrite = otherPanel.add("checkbox", undefined, "Verify Overwrite");
+	var verifyOverwrite = win.right.other.add("checkbox", undefined, "Verify Overwrite");
 	verifyOverwrite.value = g.options.verifyOverwrite;
 
 	// buttons
@@ -989,16 +924,6 @@ function showDialog()
 			}
 		}
 
-		var format = "";
-		for (var i = 0; i < formatRadiobuttons.length; i++)
-		{
-			if (formatRadiobuttons[i].value)
-			{
-				format = formatRadiobuttons[i].text;
-				break;
-			}
-		}
-
 		var sortingOrder = "ASC";
 		if (ascRadiobutton.value)
 		{
@@ -1027,7 +952,7 @@ function showDialog()
 			locked: locked.value,
 			children: children.value,
 			background: background.value,
-			format: format,
+			format: format.selection.text,
 			groupSuffix: groupSuffix,
 			paddingPrefix: paddingPrefix,
 			sortingOrder: sortingOrder,
@@ -1148,6 +1073,57 @@ function saveSettings()
 	des.putString(kOptions.SORTINGORDER, g.options.sortingOrder);
 
 	app.putCustomOptions(kOptions.UUID, des, true);
+}
+
+function getFormats()
+{
+	// Document Color Mode
+	var documentMode = app.activeDocument.mode;
+	if (documentMode === DocumentMode.BITMAP || documentMode === DocumentMode.INDEXEDCOLOR)
+	{
+		return [".png", ".gif", ".tif", ".psd", ".pdf"];
+	}
+	else if (documentMode === DocumentMode.RGB || documentMode === DocumentMode.GRAYSCALE)
+	{
+		switch (app.activeDocument.bitsPerChannel)
+		{
+			case BitsPerChannelType.EIGHT:
+				return [".png", ".jpg", ".gif", ".tif", ".psd", ".pdf"];
+				break;
+			case BitsPerChannelType.SIXTEEN:
+				return [".png", ".jpg", ".tif", ".psd", ".pdf"];
+				break;
+			case BitsPerChannelType.THIRTYTWO:
+				return [".tif", ".psd"];
+				break;
+		}
+	} 
+	else if (documentMode === DocumentMode.CMYK)
+	{
+		switch (app.activeDocument.bitsPerChannel)
+		{
+			case BitsPerChannelType.EIGHT:
+				return [".jpg", ".tif", ".psd", ".pdf"];
+				break;
+			case BitsPerChannelType.SIXTEEN:
+				return [".jpg", ".tif", ".psd", ".pdf"];
+				break;
+		}
+	}
+	else if (documentMode === DocumentMode.LAB)
+	{
+		switch (app.activeDocument.bitsPerChannel)
+		{
+			case BitsPerChannelType.EIGHT:
+				return [".tif", ".psd", ".pdf"];
+				break;
+			case BitsPerChannelType.SIXTEEN:
+				return [".tif", ".psd", ".pdf"];
+				break;
+		}
+	}
+
+	return [];
 }
 
 function progress(steps)
