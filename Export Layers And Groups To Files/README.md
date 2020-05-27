@@ -22,7 +22,8 @@ Tested with Photoshop CC 2020.
 
 ## Options
 
-(Filename)[#filename]
+[Filename](#Filename)
+[File Format](#File-Format)
 
 ### Filename
 
