@@ -22,8 +22,22 @@ Tested with Photoshop CC 2020.
 
 ## Options
 
-[Filename](#Filename)
-[File Format](#File-Format)
+- [Filename](#Filename)
+- [File Format](#File-Format)
+- [Group Suffix](#Group-Suffix)
+- [Numbering Prefix](#Numbering-Prefix)
+- [Sorting Order](#Sorting-Order)
+- [Resize](#Resize)
+- [Export Layers](#Export-Layers)
+- [Export Groups](#Export-Groups)
+- [Child Layers](#Child-Layers)
+- [Hidden Layers (With Layer Color)](#Hidden-Layers-With-Layer-Color)
+- [Keep Background Layer](#Keep-Background-Layer)
+- [Keep Adjustment Layers Visible](#Keep-Adjustment-Layers-Visible)
+- [Keep Pixel Locked Layers Visible](#Keep-Pixel-Locked-Layers-Visible)
+- [Trim](#Trim)
+- [Layer Colors](#Layer-Colors)
+- [Verify Overwrite](#Verify-Overwrite)
 
 ### Filename
 
