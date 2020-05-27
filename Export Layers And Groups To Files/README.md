@@ -22,6 +22,8 @@ Tested with Photoshop CC 2020.
 
 ## Options
 
+(Filename)[#filename]
+
 ### Filename
 
 The filename is defined as a mix of a custom name together with tags that inserts parts of the document name. You should at the very least include the `{layer}` tag to ensure unique naming of the output files.
