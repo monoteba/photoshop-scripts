@@ -26,7 +26,7 @@ SOFTWARE.
 
 const kOptions = 
 {
-	UUID: "7d872db6-52b1-42ef-8312-a746478a6a8b",
+	UUID: "94e1f2e6-54d3-4441-b506-1caaac650842",
 	FILENAME: app.stringIDToTypeID("Filename"),
 	NOCOLOR: app.stringIDToTypeID("NoColor"),
 	RED: app.stringIDToTypeID("Red"),
@@ -49,6 +49,15 @@ const kOptions =
 	BACKGROUND: app.stringIDToTypeID("Background"),
 	SORTINGORDER: app.stringIDToTypeID("SortingOrder"),
 	VERIFYOVERWRITE: app.stringIDToTypeID("VerifyOverwrite"),
+	RESIZE: app.stringIDToTypeID("Resize"),
+	RESIZEOPTIONS: app.stringIDToTypeID("ResizeOptions"),
+	RESIZEVALUES: app.stringIDToTypeID("ResizeValues"),
+}
+
+const kResizeOption = 
+{
+	WIDTH: "Width", // matches width
+	HEIGHT: "Height", // matches height
 }
 
 // global object
@@ -61,6 +70,7 @@ var g = {
 	layerColors: ["No Color", "Red", "Orange", "Yellow", "Green", "Blue", "Violet", "Gray"],
 	groupSuffix: "",
 	paddingPrefix: "",
+	resizeItems: [],
 };
 
 function main()
@@ -85,7 +95,6 @@ function main()
 	if (g.targetLayers.length === 0)
 	{
 		alert("No layers to export");
-		g.doc.close(SaveOptions.DONOTSAVECHANGES);
 		return;
 	}
 
@@ -109,95 +118,116 @@ function main()
 
 	var outputNames = getOutputNames();
 
+	progress(g.targetLayers.length * g.options.resizeItems.length);
+
 	// Confirm overwriting files
-	if (g.options.verifyOverwrite)
+	var resizeCount = g.options.resize ? g.options.resizeItems.length : 1;
+
+	for (var n = 0; n < resizeCount; n++)
 	{
-		// Make a dry run to see if any files already exists
-		for (var i = 0; i < g.targetLayers.length; i++)
+		if (g.options.verifyOverwrite)
 		{
-			var result = saveFile(outputNames[i], true);
-			if (result === false)
+			// Make a dry run to see if any files already exists
+			for (var i = 0; i < g.targetLayers.length; i++)
 			{
-				g.doc.close(SaveOptions.DONOTSAVECHANGES);
-				return;
-			}
-			else if (result === true)
-			{
-				break;
-			}
-		}
-	}
-
-	progress(g.targetLayers.length);
-
-	// Cache layers we want to hide
-	var layersToHide = getAllLayers(true, !g.options.adjustments);
-
-	// Loop over each target layer and save the png
-	for (var i = 0; i < g.targetLayers.length; i++)
-	{
-		// Save history state before proceeding
-		var savedState = g.doc.activeHistoryState;
-
-		// Begin by hiding all layers
-		hideLayers(layersToHide);
-
-		// Make the layer visible within its hierarchy
-		showInHierarchy(g.targetLayers[i]);
-
-		// Show child layers based on user preferences
-		var children = [];
-		findChildLayers(g.targetLayers[i], children);
-
-		if (g.options.hidden === false)
-		{
-			// Show children below in hierarchy that was previously visible
-			for (var j = 0; j < children.length; j++)
-			{
-				children[j].visible = visibleLayerDict[children[j].id];
-			}
-		}
-		else
-		{
-			// If the layer is a group, show all children with a matching color tag
-			for (var j = 0; j < children.length; j++)
-			{
-				if (children[j].typename === "LayerSet" || layerInColors(children[j]))
+				var result = saveFile(g.doc, outputNames[n][i], true);
+				if (result === false)
 				{
-					children[j].visible = true;
+					// g.doc.close(SaveOptions.DONOTSAVECHANGES);
+					progress.close();
+					return;
+				}
+				else if (result === true)
+				{
+					break;
 				}
 			}
 		}
-
-		// Trim the document if enabled
-		if (g.options.trim)
-		{
-			g.doc.trim(TrimType.TRANSPARENT);
-		}
-
-		// Save!
-		try
-		{
-			saveFile(outputNames[i], false);
-		}
-		catch (err)
-		{
-			alert("Save error " + err);
-			break;
-		}
-
-		// Increment progress bar
-		progress.increment();
-
-		// Restore history
-		g.doc.activeHistoryState = savedState;
 	}
 
-	// Close progress bar window
-	progress.close();
+	// save loop
+	for (var n = 0; n < resizeCount; n++)
+	{
+		var resizedState = g.doc.activeHistoryState;
+
+		// create another resized duplicate
+		if (g.options.resize)
+		{
+			resizeDocument(g.doc, g.options.resizeItems[n].resizeOption, g.options.resizeItems[n].resizeValue);
+		}
+
+		// Cache layers we want to hide
+		var layersToHide = getAllLayers(true, !g.options.adjustments);
+
+		// Loop over each target layer and save the png
+		for (var i = 0; i < g.targetLayers.length; i++)
+		{
+			// Save history state before proceeding
+			var savedState = g.doc.activeHistoryState;
+
+			// Begin by hiding all layers
+			hideLayers(layersToHide);
+
+			// Make the layer visible within its hierarchy
+			showInHierarchy(g.targetLayers[i]);
+
+			// Show child layers based on user preferences
+			var children = [];
+			findChildLayers(g.targetLayers[i], children);
+
+			if (g.options.hidden === false)
+			{
+				// Show children below in hierarchy that was previously visible
+				for (var j = 0; j < children.length; j++)
+				{
+					children[j].visible = visibleLayerDict[children[j].id];
+				}
+			}
+			else
+			{
+				// If the layer is a group, show all children with a matching color tag
+				for (var j = 0; j < children.length; j++)
+				{
+					if (children[j].typename === "LayerSet" || layerInColors(children[j]))
+					{
+						children[j].visible = true;
+					}
+				}
+			}
+
+			// Trim the document if enabled
+			if (g.options.trim)
+			{
+				g.doc.trim(TrimType.TRANSPARENT);
+			}
+
+			// Save!
+			try
+			{
+				saveFile(g.doc, outputNames[n][i], false);
+			}
+			catch (err)
+			{
+				alert("Save error line: " + err.line + "\n" + err);
+				break;
+			}
+
+			// Increment progress bar
+			progress.increment();
+
+			// Restore history
+			g.doc.activeHistoryState = savedState;
+		}
+
+		g.doc.activeHistoryState = resizedState;
+
+	} // end of save loop
 
 	// Close the duplicated document
 	g.doc.close(SaveOptions.DONOTSAVECHANGES);
+
+	// Close progress bar window
+	progress.close();
 }
 
 function initialize()
@@ -415,26 +445,85 @@ function getOutputNames()
 
 	g.groupSuffix = getPrefixSuffix(g.options.groupSuffix); // just for safety
 
-	for (var i = 0; i < g.targetLayers.length; i++)
-	{
-		var filename = resolveName(g.targetLayers[i]);
+	var resizeCount = g.options.resize ? g.options.resizeItems.length : 1;
 
-		if (nameObj.hasOwnProperty(filename) === false)
+	for (var n = 0; n < resizeCount; n++)
+	{
+		names.push([]);
+
+		for (var i = 0; i < g.targetLayers.length; i++)
 		{
-			// the name hasn't been used yet, so add it and set count to 0
-			nameObj[filename] = 0;
-			names.push(filename);
-		}
-		else
-		{
-			// the name is already used, so increment the count
-			nameObj[filename] += 1;
-			var num = (pad + nameObj[filename]).slice(-pad.length);
-			names.push(filename + g.paddingPrefix + num);
+			var sizeName = "";
+			if (g.options.resize)
+			{
+				sizeName = g.options.resizeItems[n].resizeOption + "_";
+				sizeName += g.options.resizeItems[n].resizeValue + "px/";
+			}
+
+			var filename = sizeName + resolveName(g.targetLayers[i]);
+
+			if (nameObj.hasOwnProperty(filename) === false)
+			{
+				// the name hasn't been used yet, so add it and set count to 0
+				nameObj[filename] = 0;
+				names[n].push(filename);
+			}
+			else
+			{
+				// the name is already used, so increment the count
+				nameObj[filename] += 1;
+				var num = (pad + nameObj[filename]).slice(-pad.length);
+				names[n].push(filename + g.paddingPrefix + num);
+			}
 		}
 	}
 
 	return names;
+}
+
+// Resizes a given document (if needed)
+function resizeDocument(doc, resizeOption, resizeValue)
+{
+	var docSize = {
+		width: doc.width.as("px"),
+		height: doc.height.as("px"),
+	};
+
+	if (resizeOption === kResizeOption.WIDTH)
+	{
+		if (parseInt(resizeValue) === parseInt(docSize.width))
+		{
+			return;
+		}
+
+		var newSize = {
+			width: parseInt(resizeValue),
+			height: parseInt(Math.round(doc.height * (resizeValue / doc.width)))
+		}
+	}
+	else if (resizeOption === kResizeOption.HEIGHT)
+	{
+		if (parseInt(resizeValue) === parseInt(docSize.height))
+		{
+			return;
+		}
+
+		var newSize = {
+			width: parseInt(Math.round(doc.width * (resizeValue / doc.height))),
+			height: parseInt(resizeValue)
+		}
+	}
+	else
+	{
+		return;
+	}
+
+	doc.resizeImage(
+		new UnitValue(newSize.width, "px"),
+		new UnitValue(newSize.height, "px"),
+		doc.resolution,
+		ResampleMethod.AUTOMATIC
+	);
 }
 
 // Hide all layers and groups in the document
@@ -639,8 +728,22 @@ function resolveName(layer)
 
 // Save a PNG given a document, path, filename and name
 // The function can do a dry run, where no files are saved
-function saveFile(filename, dryrun)
+function saveFile(doc, filename, dryrun)
 {
+	// Check if output folder exists
+	var index = filename.lastIndexOf("/");
+	if (index !== -1)
+	{
+		var folder = new Folder(g.outputPath + "/" + filename.substring(0, index));
+		if (folder.exists === false)
+		{
+			if (folder.create() === false)
+			{
+				return;
+			}
+		}
+	}
+
 	// Create new file object
 	var file = new File(g.outputPath + "/" + filename + g.options.format);
 
@@ -697,7 +800,7 @@ function saveFile(filename, dryrun)
 			saveOptions.optimizeForWeb = true;
 	}
 
-	g.doc.saveAs(file, saveOptions, true);
+	doc.saveAs(file, saveOptions, true);
 }
 
 // Show the dialog window with options
@@ -714,7 +817,8 @@ function showDialog()
 
 	var win = new Window("dialog", "Export Layers And Groups To Files", undefined, {resizeable: false});
 	win.orientation = "column";
-	win.alignChildren = "fill";
+	win.alignment = ["center", "center"];
+	win.alignChildren = ["fill", "fill"];
 
 	win.wrapper = win.add("group");
 	win.wrapper.orientation = "row";
@@ -722,24 +826,25 @@ function showDialog()
 
 	win.left = win.wrapper.add("group");
 	win.left.orientation = "column";
-	win.left.alignChildren = "fill";
+	win.left.alignChildren = ["fill", "fill"];
 
 	win.right = win.wrapper.add("group");
 	win.right.orientation = "column";
-	win.right.alignChildren = "fill";
+	win.right.alignChildren = ["fill", "fill"];
 
 	// filename and format
-	win.left.filename = win.left.add("panel", undefined, "Filename", {borderStyle: "etched"});
+	win.left.filename = win.left.add("panel", undefined, "Filename");
 	win.left.filename.orientation = "column";
-	win.left.filename.alignChildren = "fill";
+	win.left.filename.alignChildren = ["fill", ""];
 
 	win.left.filename.group = win.left.filename.add("group");
 	win.left.filename.group.orientation = "row";
-	win.left.filename.group.alignChildren = "fill";
+	win.left.filename.group.alignChildren = ["fill", "fill"];
 
 	var filename = win.left.filename.group.add("edittext");
 	filename.preferredSize.width = 300;
 	filename.text = g.options.filename;
+	filename.active = true;
 
 	var formats = getFormats();
 	var format = win.left.filename.group.add("dropdownlist", undefined, formats);
@@ -757,7 +862,7 @@ function showDialog()
 	win.left.filename.add("statictext", undefined, "You can use {doc}, {group} and {layer} in the filename.");
 
 	// group suffix
-	win.left.groupSuffix = win.left.add("panel", undefined, "Group Suffix", {borderStyle: "etched"});
+	win.left.groupSuffix = win.left.add("panel", undefined, "Group Suffix");
 	win.left.groupSuffix.orientation = "row";
 	win.left.groupSuffix.alignChildren = "left";
 
@@ -774,9 +879,9 @@ function showDialog()
 	}
 
 	// padding
-	win.left.numberingPrefix = win.left.add("panel", undefined, "Numbering Prefix", {borderStyle: "etched"});
+	win.left.numberingPrefix = win.left.add("panel", undefined, "Numbering Prefix");
 	win.left.numberingPrefix.orientation = "column";
-	win.left.numberingPrefix.alignChildren = "fill";
+	win.left.numberingPrefix.alignChildren = ["fill", "fill"];
 
 	win.left.numberingPrefix.group = win.left.numberingPrefix.add("group");
 	win.left.numberingPrefix.group.orientation = "row";
@@ -797,9 +902,9 @@ function showDialog()
 	win.left.numberingPrefix.add("statictext", undefined, "Warning: This does not prevent overwriting existing files!");
 
 	// sorting order
-	win.left.sortingOrder = win.left.add("panel", undefined, "Sorting Order", {borderStyle: "etched"});
+	win.left.sortingOrder = win.left.add("panel", undefined, "Sorting Order");
 	win.left.sortingOrder.orientation = "column";
-	win.left.sortingOrder.alignChildren = "fill";
+	win.left.sortingOrder.alignChildren = ["fill", "fill"];
 
 	win.left.sortingOrder.group = win.left.sortingOrder.add("group");
 	win.left.sortingOrder.group.orientation = "row";
@@ -823,9 +928,142 @@ function showDialog()
 	win.left.sortingOrder.add("statictext", [0, 0, 0, 0], ""); // spacer
 	win.left.sortingOrder.add("statictext", undefined, "Sorting order is mostly relevant in case of filename clashes.");
 
+	// resize
+	win.left.resize = win.left.add("panel", undefined, "Resize");
+	win.left.resize.orientation = "column";
+	win.left.resize.alignChildren = ["fill", "fill"];
+
+	win.left.resize.checkboxGroup = win.left.resize.add("group");
+	win.left.resize.checkboxGroup.orientation = "row";
+	win.left.resize.checkboxGroup.alignChildren = ["fill", "fill"];
+
+	var docWidth = app.activeDocument.width.as("px");
+	var docHeight = app.activeDocument.height.as("px");
+
+	var resize = win.left.resize.checkboxGroup.add("checkbox", undefined, "Resize Image");
+	resize.value = g.options.resize;
+	resize.onClick = function() 
+	{
+		win.left.resize.wrapper.enabled = true;
+		win.left.resize.wrapper.enabled = this.value;
+		win.left.resize.buttonGroup.addButton.enabled = resize.value;
+		win.left.resize.buttonGroup.removeAllButton.enabled = resize.value;
+	}
+
+	win.left.resize.checkboxGroup.label = win.left.resize.checkboxGroup.add("statictext", undefined, "Document Size: " + docWidth + " x " + docHeight + " px");
+	win.left.resize.checkboxGroup.label.enabled = false;
+	win.left.resize.checkboxGroup.label.justify = "right";
+
+	win.left.resize.wrapper = win.left.resize.add("group");
+	win.left.resize.wrapper.orientation = "column";
+	win.left.resize.wrapper.alignChildren = ["fill", "top"];
+	win.left.resize.wrapper.spacing = 0;
+
+	var resizeGroups = [];
+
+	var addSize = function(resizeOption, resizeValue)
+	{
+		var i = resizeGroups.push(win.left.resize.wrapper.add("group")) - 1;
+		resizeGroups[i].orientation = "row";
+		resizeGroups[i].spacing = 0;
+
+		resizeGroups.resizeOption = resizeOption;
+		resizeGroups.resizeValue = resizeValue;
+
+		resizeGroups[i].resizeOptionInput = resizeGroups[i].add("dropdownlist", undefined, [kResizeOption.WIDTH, kResizeOption.HEIGHT]);
+		resizeGroups[i].resizeOptionInput.preferredSize.width = 100;
+		resizeGroups[i].resizeOptionInput.maximumSize.width = 100;
+		if (resizeOption === kResizeOption.WIDTH)
+		{
+			resizeGroups[i].resizeOptionInput.selection = 0;
+		}
+		else if (resizeOption === kResizeOption.HEIGHT)
+		{
+			resizeGroups[i].resizeOptionInput.selection = 1;
+		}
+		else
+		{
+			resizeGroups[i].resizeOptionInput.selection = 0;
+		}
+		
+		resizeGroups[i].equalText = resizeGroups[i].add("statictext", undefined, " = ");
+		resizeGroups[i].equalText.justify = "center";
+		resizeGroups[i].equalText.preferredSize.width = 20;
+		resizeGroups[i].equalText.maximumSize.width = 20;
+
+		resizeGroups[i].resizeValueInput = resizeGroups[i].add("edittext", undefined, resizeValue);
+		resizeGroups[i].resizeValueInput.justify = "right";
+		resizeGroups[i].resizeValueInput.preferredSize.width = 100;
+		resizeGroups[i].resizeValueInput.maximumSize.width = 100;
+		resizeGroups[i].resizeValueInput.onChanging = function() 
+		{ 
+			var val = parseInt(this.text);
+			this.text = val > 0 ? val : 1;
+		}
+		
+		resizeGroups[i].unitText = resizeGroups[i].add("statictext", undefined, "px");
+		resizeGroups[i].unitText.alignment = ["fill", "center"];
+		resizeGroups[i].unitText.justify = "left";
+
+		resizeGroups[i].removeButton = resizeGroups[i].add("button", undefined, "Remove");
+		resizeGroups[i].removeButton.alignment = "right";
+		resizeGroups[i].removeButton.preferredSize.width = 120;
+		resizeGroups[i].removeButton.maximumSize.width = 120;
+		resizeGroups[i].removeButton.onClick = function()
+		{
+			win.left.resize.wrapper.remove(this.parent);
+			if (win.left.resize.wrapper.children.length === 0)
+			{
+				addSize(kResizeOption.WIDTH, docWidth);
+			}
+			win.left.resize.wrapper.enabled = true;
+			win.left.resize.wrapper.enabled = resize.value;
+			win.layout.layout(true);
+		}
+	}
+
+	win.left.resize.buttonGroup = win.left.resize.add("group");
+	win.left.resize.buttonGroup.orientation = "row";
+	win.left.resize.buttonGroup.spacing = 10;
+
+	win.left.resize.buttonGroup.addButton = win.left.resize.buttonGroup.add("button", undefined, "Add");
+	win.left.resize.buttonGroup.addButton.alignment = ["fill", "center"];
+	win.left.resize.buttonGroup.addButton.preferredSize.width = 100;
+	win.left.resize.buttonGroup.addButton.onClick = function()
+	{
+		addSize(kResizeOption.WIDTH, docWidth);
+		win.left.resize.wrapper.enabled = true;
+		win.left.resize.wrapper.enabled = resize.value;
+		win.layout.layout(true);
+	}
+
+	win.left.resize.buttonGroup.removeAllButton = win.left.resize.buttonGroup.add("button", undefined, "Remove All");
+	win.left.resize.buttonGroup.removeAllButton.alignment = ["right", "center"];
+	win.left.resize.buttonGroup.removeAllButton.preferredSize.width = 120;
+	win.left.resize.buttonGroup.removeAllButton.maximumSize.width = 120;
+	win.left.resize.buttonGroup.removeAllButton.onClick = function()
+	{
+		for (var i = 0; i < resizeGroups.length; i++)
+		{
+			win.left.resize.wrapper.remove(resizeGroups[i]);
+		}
+		resizeGroups = [];
+		addSize(kResizeOption.WIDTH, docWidth);
+		win.layout.layout(true);
+	}
+
+	for (var i = 0; i < g.options.resizeItems.length; i++)
+	{
+		addSize(g.options.resizeItems[i].resizeOption, g.options.resizeItems[i].resizeValue);
+	}
+
+	win.left.resize.wrapper.enabled = resize.value;
+	win.left.resize.buttonGroup.addButton.enabled = resize.value;
+	win.left.resize.buttonGroup.removeAllButton.enabled = resize.value;
+
 	// settings
-	win.right.settings = win.right.add("panel", undefined, "Settings", { borderStyle: "etched" });
-	win.right.settings.alignChildren = "fill";
+	win.right.settings = win.right.add("panel", undefined, "Settings");
+	win.right.settings.alignChildren = ["fill", "fill"];
 
 	var layers = win.right.settings.add("checkbox", undefined, "Export Layers");
 	var groups = win.right.settings.add("checkbox", undefined, "Export Groups");
@@ -852,7 +1090,7 @@ function showDialog()
 	trim.value = g.options.trim;
 
 	// layer colors
-	win.right.layerColors = win.right.add("panel", undefined, "Layer Colors", { borderStyle: "etched" });
+	win.right.layerColors = win.right.add("panel", undefined, "Layer Colors");
 	win.right.layerColors.orientation = "row";
 	win.right.layerColors.alignChildren = "top";
 
@@ -885,7 +1123,7 @@ function showDialog()
 	gray.value = g.options.gray;
 
 	// verify overwrite
-	win.right.other = win.right.add("panel", undefined, "Other", {borderStyle: "etched"});
+	win.right.other = win.right.add("panel", undefined, "Other");
 	win.right.other.alignChildren = "left";
 
 	var verifyOverwrite = win.right.other.add("checkbox", undefined, "Verify Overwrite");
@@ -894,7 +1132,7 @@ function showDialog()
 	// buttons
 	var buttonGroup = win.add("group");
 	buttonGroup.orientation = "row";
-	buttonGroup.alignment = "right";
+	buttonGroup.alignment = ["right", "bottom"];
 
 	var cancelButton = buttonGroup.add("button", undefined, "Cancel", {name: "cancel"});
 	cancelButton.minimumSize = [120, 0];
@@ -903,7 +1141,7 @@ function showDialog()
 	var saveButton = buttonGroup.add("button", undefined, "Save", {name: "ok"});
 	saveButton.minimumSize = [120, 0];
 	saveButton.onClick = function()
-	{
+	{	
 		var groupSuffix = "";
 		for (var i = 0; i < groupSuffixRadiobuttons.length; i++)
 		{
@@ -934,6 +1172,17 @@ function showDialog()
 			sortingOrder = "DESC";
 		}
 
+		var resizeItems = [];
+		for (var i = 0; i < resizeGroups.length; i++)
+		{
+			resizeItems.push(
+				{
+					resizeOption: resizeGroups[i].resizeOptionInput.selection.text,
+					resizeValue: parseInt(resizeGroups[i].resizeValueInput.text),
+				}
+			);
+		}
+
 		g.options = {
 			filename: filename.text,
 			noColor: noColor.value,
@@ -956,13 +1205,16 @@ function showDialog()
 			groupSuffix: groupSuffix,
 			paddingPrefix: paddingPrefix,
 			sortingOrder: sortingOrder,
+			resize: resize.value,
+			resizeItems: resizeItems,
 			verifyOverwrite: verifyOverwrite.value,
 		};
 
 		win.close();
-		saveSettings();
+
 		try
 		{
+			saveSettings();
 			main();
 		}
 		catch (err)
@@ -1014,7 +1266,28 @@ function loadSettings()
 			groupSuffix: "Underscore",
 			paddingPrefix: "Underscore",
 			sortingOrder: "ASC",
+			resize: false,
+			resizeItems: [{resizeOption: kResizeOption.WIDTH, resizeValue: app.activeDocument.width.as("px")}],
 		};
+	}
+
+	// get resize items
+	var resizeOptions = des.getString(kOptions.RESIZEOPTIONS);
+	resizeOptions = resizeOptions.split(";");
+
+	var resizeValues = des.getString(kOptions.RESIZEVALUES);
+	resizeValues = resizeValues.split(";");
+
+	var resizeItems = [];
+	for (var i = 0; i < resizeOptions.length; i++)
+	{
+		if (resizeOptions[i].length > 0)
+		{
+			resizeItems.push({
+				resizeOption: resizeOptions[i],
+				resizeValue: resizeValues[i],
+			});
+		}
 	}
 
 	// return loaded settings
@@ -1041,6 +1314,8 @@ function loadSettings()
 		groupSuffix: des.getString(kOptions.GROUPSUFFIX),
 		paddingPrefix: des.getString(kOptions.PADDINGPREFIX),
 		sortingOrder: des.getString(kOptions.SORTINGORDER),
+		resize: des.getBoolean(kOptions.RESIZE),
+		resizeItems: resizeItems,
 	};
 }
 
@@ -1048,6 +1323,23 @@ function loadSettings()
 function saveSettings()
 {
 	var des = new ActionDescriptor();
+
+	// semi-colon separated strings for resize items
+	var resizeOptions = "";
+	var resizeValues = "";
+
+	for (var i = 0; i < g.options.resizeItems.length; i++)
+	{
+		resizeOptions += g.options.resizeItems[i].resizeOption + ";";
+		resizeValues += g.options.resizeItems[i].resizeValue + ";";
+	}
+
+	if (g.options.resizeItems.length > 0)
+	{
+		// removes the last semi-colon
+		resizeOptions = resizeOptions.slice(0, -1);
+		resizeValues = resizeValues.slice(0, -1);
+	}
 
 	des.putString(kOptions.FILENAME, g.options.filename);
 	des.putBoolean(kOptions.NOCOLOR, g.options.noColor);
@@ -1071,7 +1363,9 @@ function saveSettings()
 	des.putString(kOptions.GROUPSUFFIX, g.options.groupSuffix);
 	des.putString(kOptions.PADDINGPREFIX, g.options.paddingPrefix);
 	des.putString(kOptions.SORTINGORDER, g.options.sortingOrder);
-
+	des.putBoolean(kOptions.RESIZE, g.options.resize);
+	des.putString(kOptions.RESIZEOPTIONS, resizeOptions);
+	des.putString(kOptions.RESIZEVALUES, resizeValues);
 	app.putCustomOptions(kOptions.UUID, des, true);
 }
 
