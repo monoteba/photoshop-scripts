@@ -23,7 +23,7 @@ Tested with Photoshop CC 2020.
 ## Options
 
 - [Filename](#Filename)
-- [File Format](#File-Format)
+    - [File Format](#File-Format)
 - [Group Suffix](#Group-Suffix)
 - [Numbering Prefix](#Numbering-Prefix)
 - [Sorting Order](#Sorting-Order)
