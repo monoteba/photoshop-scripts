@@ -16,6 +16,7 @@ Tested with Photoshop CC 2020.
 - Keeping adjustment layers visible
 - Trimming of layers
 - Does not export empty groups
+- Export layers in multiple sizes
 
 ![](ScriptUI.png)
 
@@ -72,7 +73,13 @@ Note: A 4-digit number is added after the filename in case of name clashes. So i
 
 ### Sorting Order
 
-The order layers are processed. Either from **Top to Bottom** or **Bottom to Top** as seen in Layers panel. 
+The order layers are processed. Either from **Top to Bottom** or **Bottom to Top** as seen in Layers panel.
+
+### Resize
+
+Allows you to export in multiple sizes by resizing to match a specific **width** or **height**.
+
+When this option is enabled, the exported layers will be placed in a subfolder with the name of the size, like `Width_256px`.
 
 ### Export Layers
 
