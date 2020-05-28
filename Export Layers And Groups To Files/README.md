@@ -28,16 +28,18 @@ Tested with Photoshop CC 2020.
 - [Numbering Prefix](#Numbering-Prefix)
 - [Sorting Order](#Sorting-Order)
 - [Resize](#Resize)
-- [Export Layers](#Export-Layers)
-- [Export Groups](#Export-Groups)
-- [Child Layers](#Child-Layers)
-- [Hidden Layers (With Layer Color)](#Hidden-Layers-With-Layer-Color)
-- [Keep Background Layer](#Keep-Background-Layer)
-- [Keep Adjustment Layers Visible](#Keep-Adjustment-Layers-Visible)
-- [Keep Pixel Locked Layers Visible](#Keep-Pixel-Locked-Layers-Visible)
-- [Trim](#Trim)
+- Export
+	- [Layers](#Layers)
+	- [Groups](#Groups)
+	- [Child Layers](#Child-Layers)
+	- [Hidden Layers](#Hidden-Layers)
+- Settings
+	- [Keep Background Layer](#Keep-Background-Layer)
+	- [Keep Adjustment Layers](#Keep-Adjustment-Layers)
+	- [Keep Locked Layers](#Keep-Locked-Layers)
+	- [Trim Layer](#Trim-Layer)
 - [Layer Colors](#Layer-Colors)
-- [Verify Overwrite](#Verify-Overwrite)
+- [Confirm Overwrite](#Confirm-Overwrite)
 
 ### Filename
 
@@ -98,11 +100,11 @@ Allows you to export in multiple sizes by resizing to match a specific **width**
 
 When this option is enabled, the exported layers will be placed in a subfolder with the name of the size, like `Width_256px`.
 
-### Export Layers
+### Layers
 
 Will include layers in the export.
 
-### Export Groups
+### Groups
 
 Will include groups in the export.
 
@@ -112,7 +114,7 @@ If enabled, the script will export layers in groups and sub-groups separately. O
 
 Tip: Use it together with layer colors to specify which layers/group should be exported.
 
-### Hidden Layers (With Layer Color)
+### Hidden Layers
 
 Will make hidden layers visible and export them, if they have one of selected layer colors.
 
@@ -120,15 +122,15 @@ Will make hidden layers visible and export them, if they have one of selected la
 
 If enabled, will leave the **Background** layer visible and not export it separately. Otherwise the **Background** layer is hidden and exported separately - depending on whether it is visible and other preferences, like **Layer Colors**.
 
-### Keep Adjustment Layers Visible
+### Keep Adjustment Layers
 
 Keeps **Adjustment Layers** visible so they still affect the layers being exported. Useful to keep overall adjustment on all layers.
 
-### Keep Pixel Locked Layers Visible
+### Keep Locked Layers
 
-Keeps **Pixel Locked** (including generally locked) layers visible on all exported layers. This is, for example, useful if you have a watermark that you want to remain visible on each exported layer.
+Keeps **Locked** (specifically *Pixel Locked*) layers visible on all exported layers. This is, for example, useful if you have a watermark that you want to remain visible on each exported layer.
 
-### Trim
+### Trim Layers
 
 Crops the image by surrounding transparent pixels.
 
@@ -138,7 +140,7 @@ Only layers and groups with the specified layer color(s) are exported. This is e
 
 Note: The **Background** layer is considered to have "No Color".
 
-### Verify Overwrite
+### Confirm Overwrite
 
 Performs a test run prior to saving any files, and warns you if one or more files will be overwritten.
 

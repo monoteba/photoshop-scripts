@@ -26,7 +26,7 @@ SOFTWARE.
 
 const kOptions = 
 {
-	UUID: "94e1f2e6-54d3-4441-b506-1caaac650842",
+	UUID: "f1feca61-db14-4093-9bd5-aff78e1d8006",
 	FILENAME: app.stringIDToTypeID("Filename"),
 	NOCOLOR: app.stringIDToTypeID("NoColor"),
 	RED: app.stringIDToTypeID("Red"),
@@ -48,7 +48,7 @@ const kOptions =
 	PADDINGPREFIX: app.stringIDToTypeID("PaddingPrefix"),
 	BACKGROUND: app.stringIDToTypeID("Background"),
 	SORTINGORDER: app.stringIDToTypeID("SortingOrder"),
-	VERIFYOVERWRITE: app.stringIDToTypeID("VerifyOverwrite"),
+	CONFIRMOVERWRITE: app.stringIDToTypeID("ConfirmOverwrite"),
 	RESIZE: app.stringIDToTypeID("Resize"),
 	RESIZEOPTIONS: app.stringIDToTypeID("ResizeOptions"),
 	RESIZEVALUES: app.stringIDToTypeID("ResizeValues"),
@@ -125,7 +125,7 @@ function main()
 
 	for (var n = 0; n < resizeCount; n++)
 	{
-		if (g.options.verifyOverwrite)
+		if (g.options.confirmOverwrite)
 		{
 			// Make a dry run to see if any files already exists
 			for (var i = 0; i < g.targetLayers.length; i++)
@@ -859,7 +859,8 @@ function showDialog()
 		}
 	}
 
-	win.left.filename.add("statictext", undefined, "You can use {doc}, {group} and {layer} in the filename.");
+	win.left.filename.description = win.left.filename.add("statictext", undefined, "You can use {doc}, {group} and {layer} in the filename.");
+	win.left.filename.description.enabled = false;
 
 	// group suffix
 	win.left.groupSuffix = win.left.add("panel", undefined, "Group Suffix");
@@ -897,9 +898,8 @@ function showDialog()
 		}
 	}
 
-	win.left.numberingPrefix.add("statictext", [0, 0, 0, 0], ""); // spacer
-	win.left.numberingPrefix.add("statictext", undefined, "Filename clashes are resolved with 4-digit numbering.");
-	win.left.numberingPrefix.add("statictext", undefined, "Warning: This does not prevent overwriting existing files!");
+	win.left.numberingPrefix.description1 = win.left.numberingPrefix.add("statictext", undefined, "Duplicate names are numbered, e.g. \"_0001\"");
+	win.left.numberingPrefix.description1.enabled = false;
 
 	// sorting order
 	win.left.sortingOrder = win.left.add("panel", undefined, "Sorting Order");
@@ -925,8 +925,8 @@ function showDialog()
 			ascRadiobutton.value = true;
 	}
 
-	win.left.sortingOrder.add("statictext", [0, 0, 0, 0], ""); // spacer
-	win.left.sortingOrder.add("statictext", undefined, "Sorting order is mostly relevant in case of filename clashes.");
+	win.left.sortingOrder.description = win.left.sortingOrder.add("statictext", undefined, "Sorting order is mostly relevant in case of duplicate names.");
+	win.left.sortingOrder.description.enabled = false;
 
 	// resize
 	win.left.resize = win.left.add("panel", undefined, "Resize");
@@ -1031,7 +1031,15 @@ function showDialog()
 	win.left.resize.buttonGroup.addButton.preferredSize.width = 100;
 	win.left.resize.buttonGroup.addButton.onClick = function()
 	{
-		addSize(kResizeOption.WIDTH, docWidth);
+		if (resizeGroups.length > 0)
+		{
+			var rg = resizeGroups[resizeGroups.length - 1];
+			addSize(rg.resizeOptionInput.selection.text, rg.resizeValueInput.text);
+		}
+		else
+		{
+			addSize(kResizeOption.WIDTH, docWidth);
+		}
 		win.left.resize.wrapper.enabled = true;
 		win.left.resize.wrapper.enabled = resize.value;
 		win.layout.layout(true);
@@ -1061,24 +1069,25 @@ function showDialog()
 	win.left.resize.buttonGroup.addButton.enabled = resize.value;
 	win.left.resize.buttonGroup.removeAllButton.enabled = resize.value;
 
+	// export
+	win.right.export = win.right.add("panel", undefined, "Export");
+	win.right.export.alignChildren = ["fill", "fill"];
+
+	var layers = win.right.export.add("checkbox", undefined, "Layers");
+	var groups = win.right.export.add("checkbox", undefined, "Groups");
+	// exportSpacer = win.right.export.add("panel"); // spacer
+	// exportSpacer.minimumSize.height = exportSpacer.maximumSize.height = 1;
+	var children = win.right.export.add("checkbox", undefined, "Child Layers");
+	var hidden = win.right.export.add("checkbox", undefined, "Hidden Layers");
+
 	// settings
 	win.right.settings = win.right.add("panel", undefined, "Settings");
 	win.right.settings.alignChildren = ["fill", "fill"];
 
-	var layers = win.right.settings.add("checkbox", undefined, "Export Layers");
-	var groups = win.right.settings.add("checkbox", undefined, "Export Groups");
-	settingsRule1 = win.right.settings.add("panel"); // spacer
-	settingsRule1.minimumSize.height = settingsRule1.maximumSize.height = 1;
-	var children = win.right.settings.add("checkbox", undefined, "Child Layers");
-	var hidden = win.right.settings.add("checkbox", undefined, "Hidden Layers");
-	settingsRule2 = win.right.settings.add("panel"); // spacer
-	settingsRule2.minimumSize.height = settingsRule2.maximumSize.height = 1;
 	var background = win.right.settings.add("checkbox", undefined, "Keep Background Layer");
-	var adjustments = win.right.settings.add("checkbox", undefined, "Keep Adjustment Layers Visible");
-	var locked = win.right.settings.add("checkbox", undefined, "Keep Pixel Locked Layers Visible");
-	settingsRule3 = win.right.settings.add("panel"); // spacer
-	settingsRule3.minimumSize.height = settingsRule3.maximumSize.height = 1;
-	var trim = win.right.settings.add("checkbox", undefined, "Trim");
+	var adjustments = win.right.settings.add("checkbox", undefined, "Keep Adjustment Layers");
+	var locked = win.right.settings.add("checkbox", undefined, "Keep Locked Layers");
+	var trim = win.right.settings.add("checkbox", undefined, "Trim Layers");
 
 	hidden.value = g.options.hidden;
 	children.value = g.options.children;
@@ -1122,26 +1131,20 @@ function showDialog()
 	violet.value = g.options.violet;
 	gray.value = g.options.gray;
 
-	// verify overwrite
+	// confirm overwrite
 	win.right.other = win.right.add("panel", undefined, "Other");
 	win.right.other.alignChildren = "left";
 
-	var verifyOverwrite = win.right.other.add("checkbox", undefined, "Verify Overwrite");
-	verifyOverwrite.value = g.options.verifyOverwrite;
+	var confirmOverwrite = win.right.other.add("checkbox", undefined, "Confirm Overwriting Existing Files");
+	confirmOverwrite.value = g.options.confirmOverwrite;
 
 	// buttons
 	var buttonGroup = win.add("group");
 	buttonGroup.orientation = "row";
 	buttonGroup.alignment = ["right", "bottom"];
 
-	var cancelButton = buttonGroup.add("button", undefined, "Cancel", {name: "cancel"});
-	cancelButton.minimumSize = [120, 0];
-	cancelButton.onClick = function() { win.close(); };
-
-	var saveButton = buttonGroup.add("button", undefined, "Save", {name: "ok"});
-	saveButton.minimumSize = [120, 0];
-	saveButton.onClick = function()
-	{	
+	var saveSettingsAndClose = function()
+	{
 		var groupSuffix = "";
 		for (var i = 0; i < groupSuffixRadiobuttons.length; i++)
 		{
@@ -1207,14 +1210,32 @@ function showDialog()
 			sortingOrder: sortingOrder,
 			resize: resize.value,
 			resizeItems: resizeItems,
-			verifyOverwrite: verifyOverwrite.value,
+			confirmOverwrite: confirmOverwrite.value,
 		};
-
-		win.close();
 
 		try
 		{
 			saveSettings();
+			win.close();
+		}
+		catch (err)
+		{
+			alert("Could not save preferences\n" + err);
+		}
+	}
+
+	var cancelButton = buttonGroup.add("button", undefined, "Cancel", {name: "cancel"});
+	cancelButton.minimumSize = [120, 0];
+	cancelButton.onClick = function() { saveSettingsAndClose(); }
+
+	var saveButton = buttonGroup.add("button", undefined, "Save", {name: "ok"});
+	saveButton.minimumSize = [120, 0];
+	saveButton.onClick = function()
+	{	
+		saveSettingsAndClose();
+
+		try
+		{
 			main();
 		}
 		catch (err)
@@ -1261,7 +1282,7 @@ function loadSettings()
 			locked: false,
 			children: false,
 			background: false,
-			verifyOverwrite: true,
+			confirmOverwrite: true,
 			format: "",
 			groupSuffix: "Underscore",
 			paddingPrefix: "Underscore",
@@ -1309,7 +1330,7 @@ function loadSettings()
 		locked: des.getBoolean(kOptions.LOCKED),
 		children: des.getBoolean(kOptions.CHILDREN),
 		background: des.getBoolean(kOptions.BACKGROUND),
-		verifyOverwrite: des.getBoolean(kOptions.VERIFYOVERWRITE),
+		confirmOverwrite: des.getBoolean(kOptions.CONFIRMOVERWRITE),
 		format: des.getString(kOptions.FORMAT),
 		groupSuffix: des.getString(kOptions.GROUPSUFFIX),
 		paddingPrefix: des.getString(kOptions.PADDINGPREFIX),
@@ -1358,7 +1379,7 @@ function saveSettings()
 	des.putBoolean(kOptions.LOCKED, g.options.locked);
 	des.putBoolean(kOptions.CHILDREN, g.options.children);
 	des.putBoolean(kOptions.BACKGROUND, g.options.background);
-	des.putBoolean(kOptions.VERIFYOVERWRITE, g.options.verifyOverwrite);
+	des.putBoolean(kOptions.CONFIRMOVERWRITE, g.options.confirmOverwrite);
 	des.putString(kOptions.FORMAT, g.options.format);
 	des.putString(kOptions.GROUPSUFFIX, g.options.groupSuffix);
 	des.putString(kOptions.PADDINGPREFIX, g.options.paddingPrefix);
