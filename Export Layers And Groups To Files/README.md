@@ -28,19 +28,16 @@ Tested with Photoshop CC 2020.
 - [Numbering Prefix](#Numbering-Prefix)
 - [Sorting Order](#Sorting-Order)
 - [Resize](#Resize)
-- Export
-	- [Layers](#Layers)
-	- [Groups](#Groups)
-	- [Child Layers](#Child-Layers)
-	- [Hidden Layers](#Hidden-Layers)
-- Settings
-	- [Keep Background Layer](#Keep-Background-Layer)
-	- [Keep Adjustment Layers](#Keep-Adjustment-Layers)
-	- [Keep Locked Layers](#Keep-Locked-Layers)
-	- [Trim Layer](#Trim-Layer)
+- [Layers](#Layers)
+- [Groups](#Groups)
+- [Child Layers](#Child-Layers)
+- [Hidden Layers](#Hidden-Layers)
+- [Keep Background Layer](#Keep-Background-Layer)
+- [Keep Adjustment Layers](#Keep-Adjustment-Layers)
+- [Keep Locked Layers](#Keep-Locked-Layers)
+- [Trim Layer](#Trim-Layer)
 - [Layer Colors](#Layer-Colors)
-- Other
-	- [Confirm Overwriting Existing Files](#Confirm-Overwriting-Existing-Files)
+- [Confirm Overwriting Existing Files](#Confirm-Overwriting-Existing-Files)
 
 ### Filename
 
