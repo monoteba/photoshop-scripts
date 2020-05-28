@@ -40,7 +40,7 @@ Tested with Photoshop CC 2020.
 	- [Trim Layer](#Trim-Layer)
 - [Layer Colors](#Layer-Colors)
 - Other
-	- [Confirm Overwrite](#Confirm-Overwrite)
+	- [Confirm Overwriting Existing Files](#Confirm-Overwriting-Existing-Files)
 
 ### Filename
 
@@ -141,7 +141,7 @@ Only layers and groups with the specified layer color(s) are exported. This is e
 
 Note: The **Background** layer is considered to have "No Color".
 
-### Confirm Overwrite
+### Confirm Overwriting Existing Files
 
 Performs a test run prior to saving any files, and warns you if one or more files will be overwritten.
 
