@@ -39,7 +39,8 @@ Tested with Photoshop CC 2020.
 	- [Keep Locked Layers](#Keep-Locked-Layers)
 	- [Trim Layer](#Trim-Layer)
 - [Layer Colors](#Layer-Colors)
-- [Confirm Overwrite](#Confirm-Overwrite)
+- Other
+	- [Confirm Overwrite](#Confirm-Overwrite)
 
 ### Filename
 
