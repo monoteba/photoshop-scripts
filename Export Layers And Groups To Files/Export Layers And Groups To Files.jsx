@@ -1408,7 +1408,7 @@ function filenamePreview(event, win)
 	replaceSpace = getPrefixSuffix(replaceSpace);
 
 	var name = resolveName(layer, docName, filename, groupSuffix, replaceSpace);
-	win.left.filename.preview.text = "Example: \"" + name + format + "\"";
+	win.left.filename.preview.text = "Active layer: \"" + name + format + "\"";
 	win.left.duplicatePrefix.preview.text = "Duplicate names are numbered, example: \"Layer" + duplicatePrefix + "0001" + format + "\"";
 }
 
