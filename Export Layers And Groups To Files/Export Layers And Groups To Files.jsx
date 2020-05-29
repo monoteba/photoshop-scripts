@@ -474,15 +474,24 @@ function getOutputNames()
 
 			if (nameObj.hasOwnProperty(filename) === false)
 			{
-				// the name hasn't been used yet, so add it and set count to 0
-				nameObj[filename] = 0;
+				// the name hasn't been used yet, so add it and set count to 1
+				nameObj[filename] = {count: 1, n: n, i: i};
 				names[n].push(filename);
 			}
 			else
 			{
+				// rename the "original"
+				if (nameObj[filename].count === 1)
+				{
+					var num = (pad + nameObj[filename].count).slice(-pad.length);
+					var _n = nameObj[filename].n;
+					var _i = nameObj[filename].i;
+					names[_n][_i] = filename + g.duplicatePrefix + num;
+				}
+
 				// the name is already used, so increment the count
-				nameObj[filename] += 1;
-				var num = (pad + nameObj[filename]).slice(-pad.length);
+				nameObj[filename].count += 1;
+				var num = (pad + nameObj[filename].count).slice(-pad.length);
 				names[n].push(filename + g.duplicatePrefix + num);
 			}
 		}
