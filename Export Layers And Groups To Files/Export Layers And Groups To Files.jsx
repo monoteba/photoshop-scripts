@@ -34,7 +34,7 @@ TIFF_TRANSPARENCY = true;
 
 const kOptions = 
 {
-	UUID: "b07559a6-432e-4cd5-86c2-7287e19ba009",
+	UUID: "264a94df-9c1e-461f-b6c5-15323fe8599b",
 	FILENAME: app.stringIDToTypeID("Filename"),
 	NOCOLOR: app.stringIDToTypeID("NoColor"),
 	RED: app.stringIDToTypeID("Red"),
