@@ -24,9 +24,17 @@ SOFTWARE.
 
 #target photoshop
 
+// user preferences -----------------------------------------------------------
+
+PNG_COMPRESSION = 3; // 0-9
+JPG_QUALITY = 10; // 1-12
+TIFF_TRANSPARENCY = true;
+
+// ----------------------------------------------------------------------------
+
 const kOptions = 
 {
-	UUID: "f1feca61-db14-4093-9bd5-aff78e1d8006",
+	UUID: "b07559a6-432e-4cd5-86c2-7287e19ba009",
 	FILENAME: app.stringIDToTypeID("Filename"),
 	NOCOLOR: app.stringIDToTypeID("NoColor"),
 	RED: app.stringIDToTypeID("Red"),
@@ -45,7 +53,8 @@ const kOptions =
 	CHILDREN: app.stringIDToTypeID("Children"),
 	FORMAT: app.stringIDToTypeID("Format"),
 	GROUPSUFFIX: app.stringIDToTypeID("GroupSuffix"),
-	PADDINGPREFIX: app.stringIDToTypeID("PaddingPrefix"),
+	DUPLICATEPREFIX: app.stringIDToTypeID("DuplicatePrefix"),
+	REPLACESPACE: app.stringIDToTypeID("ReplaceSpace"),
 	BACKGROUND: app.stringIDToTypeID("Background"),
 	SORTINGORDER: app.stringIDToTypeID("SortingOrder"),
 	CONFIRMOVERWRITE: app.stringIDToTypeID("ConfirmOverwrite"),
@@ -69,7 +78,7 @@ var g = {
 	outputPath: "",
 	layerColors: ["No Color", "Red", "Orange", "Yellow", "Green", "Blue", "Violet", "Gray"],
 	groupSuffix: "",
-	paddingPrefix: "",
+	duplicatePrefix: "",
 	resizeItems: [],
 };
 
@@ -100,7 +109,8 @@ function main()
 
 	// Determine which character to use as suffix for group names
 	g.groupSuffix = getPrefixSuffix(g.options.groupSuffix);
-	g.paddingPrefix = getPrefixSuffix(g.options.paddingPrefix);
+	g.duplicatePrefix = getPrefixSuffix(g.options.duplicatePrefix);
+	g.replaceSpace = getPrefixSuffix(g.options.replaceSpace);
 
 	// Reverse targetLayers?
 	if (g.options.sortingOrder === "DESC")
@@ -473,7 +483,7 @@ function getOutputNames()
 				// the name is already used, so increment the count
 				nameObj[filename] += 1;
 				var num = (pad + nameObj[filename]).slice(-pad.length);
-				names[n].push(filename + g.paddingPrefix + num);
+				names[n].push(filename + g.duplicatePrefix + num);
 			}
 		}
 	}
@@ -681,17 +691,26 @@ function isAdjustment(layer)
 }
 
 // Resolve special naming
-function resolveName(layer)
+function resolveName(layer, docName, filename, groupSuffix, replaceSpace)
 {
 	var sourcePattern = "{doc}";
 	var groupPattern = "{group}";
 	var layerPattern = "{layer}";
 
-	var result = g.options.filename;
-	result = result.replace(sourcePattern, g.docName);
+	if (docName === undefined) { docName = g.docName; }
+	if (filename === undefined) { filename = g.options.filename; }
+	if (groupSuffix === undefined) { groupSuffix = g.groupSuffix; }
+	if (replaceSpace === undefined) { replaceSpace = g.replaceSpace; }
+
+	var result = filename;
+	result = result.replace(sourcePattern, docName);
 	result = result.replace(layerPattern, layer.name);
 
-	var groupIndex = g.options.filename.indexOf(groupPattern);
+	// replace spaces (use regex because " " does not catch all)
+	result = result.replace(/ /g, replaceSpace);
+
+	// add group names
+	var groupIndex = filename.lastIndexOf(groupPattern);
 
 	if (groupIndex !== -1)
 	{
@@ -710,7 +729,7 @@ function resolveName(layer)
 			var groups = "";
 			for (var i = groupNames.length - 1; i >= 0 ; i--)
 			{
-				groups += groupNames[i] + g.groupSuffix;
+				groups += groupNames[i].replace(/ /g, replaceSpace) + groupSuffix;
 			}
 
 			// replace groupPattern
@@ -720,6 +739,13 @@ function resolveName(layer)
 		{
 			// just remove the group pattern
 			result = result.replace(groupPattern, "");
+		}
+
+		// remove group suffix, if {group} is last part of filename
+		var isLast = (groupIndex + groupPattern.length) === filename.length;
+		if (groupNames.length > 0 && isLast)
+		{
+			result = result.slice(0, -1);
 		}
 	}
 
@@ -762,13 +788,13 @@ function saveFile(doc, filename, dryrun)
 	{
 		case ".png":
 			saveOptions = new PNGSaveOptions();
-			saveOptions.compression = 3; // 0-9
+			saveOptions.compression = PNG_COMPRESSION; // 0-9
 			saveOptions.interlaced = false;
 			break;
 		case ".jpg":
 			saveOptions = new JPEGSaveOptions();
 			saveOptions.embedColorProfile = true;
-			saveOptions.quality = 10;
+			saveOptions.quality = JPG_QUALITY;
 			saveOptions.formatOptions = FormatOptions.STANDARDBASELINE;
 			break;
 		case ".gif":
@@ -782,7 +808,7 @@ function saveFile(doc, filename, dryrun)
 			saveOptions.imageCompression = TIFFEncoding.TIFFLZW;
 			saveOptions.interleaveChannels = true;
 			saveOptions.layers = false;
-			saveOptions.transparency = true;
+			saveOptions.transparency = TIFF_TRANSPARENCY;
 			break;
 		case ".psd":
 			saveOptions = new PhotoshopSaveOptions();
@@ -794,7 +820,7 @@ function saveFile(doc, filename, dryrun)
 			saveOptions = new PDFSaveOptions();
 			saveOptions.alphaChannels = false;
 			saveOptions.embedColorProfile = true;
-			saveOptions.jpegQuality = 10;
+			saveOptions.jpegQuality = JPG_QUALITY;
 			saveOptions.layers = false;
 			saveOptions.preserveEditing = false;
 			saveOptions.optimizeForWeb = true;
@@ -816,6 +842,8 @@ function showDialog()
 	g.options = loadSettings();
 
 	var win = new Window("dialog", "Export Layers And Groups To Files", undefined, {resizeable: false});
+	win.input = {}; // define input key on object
+
 	win.orientation = "column";
 	win.alignment = ["center", "center"];
 	win.alignChildren = ["fill", "fill"];
@@ -842,12 +870,15 @@ function showDialog()
 	win.left.filename.group.alignChildren = ["fill", "fill"];
 
 	var filename = win.left.filename.group.add("edittext");
+	win.input.filename = filename; // for filenamePreview()
 	filename.preferredSize.width = 300;
 	filename.text = g.options.filename;
 	filename.active = true;
+	filename.addEventListener("changing", function(event) { filenamePreview(event, win); });
 
 	var formats = getFormats();
 	var format = win.left.filename.group.add("dropdownlist", undefined, formats);
+	win.input.format = format; // for filenamePreview();
 	format.preferredSize.width = 100;
 
 	format.selection = 0;
@@ -859,47 +890,97 @@ function showDialog()
 		}
 	}
 
+	format.addEventListener("change", function(event) { filenamePreview(event, win); });
+
 	win.left.filename.description = win.left.filename.add("statictext", undefined, "You can use {doc}, {group} and {layer} in the filename.");
 	win.left.filename.description.enabled = false;
 
+	win.left.filename.preview = win.left.filename.add("statictext", undefined, "");
+	win.left.filename.preview.enabled = false;
+
 	// group suffix
 	win.left.groupSuffix = win.left.add("panel", undefined, "Group Suffix");
-	win.left.groupSuffix.orientation = "row";
-	win.left.groupSuffix.alignChildren = "left";
+	win.left.groupSuffix.orientation = "column";
+	win.left.groupSuffix.alignChildren = ["fill", "fill"];
+
+	win.left.groupSuffix.group = win.left.groupSuffix.add("group");
+	win.left.groupSuffix.group.orientation = "row";
+	win.left.groupSuffix.group.alignChildren = "left";
 
 	var suffixes = ["Nothing", "Space", "Dash", "Underscore", "Period"];
 	var groupSuffixRadiobuttons = [];
 
 	for (var i = 0; i < suffixes.length;i ++)
 	{
-		groupSuffixRadiobuttons[i] = win.left.groupSuffix.add("radiobutton", undefined, suffixes[i]);
+		groupSuffixRadiobuttons[i] = win.left.groupSuffix.group.add("radiobutton", undefined, suffixes[i]);
+		groupSuffixRadiobuttons[i].addEventListener("click", function(event) { filenamePreview(event, win); });
 		if (suffixes[i] === g.options.groupSuffix)
 		{
 			groupSuffixRadiobuttons[i].value = true;
 		}
 	}
 
-	// padding
-	win.left.numberingPrefix = win.left.add("panel", undefined, "Numbering Prefix");
-	win.left.numberingPrefix.orientation = "column";
-	win.left.numberingPrefix.alignChildren = ["fill", "fill"];
+	win.input.groupSuffixes = groupSuffixRadiobuttons; // for filenamePreview()
 
-	win.left.numberingPrefix.group = win.left.numberingPrefix.add("group");
-	win.left.numberingPrefix.group.orientation = "row";
+	win.left.groupSuffix.description = win.left.groupSuffix.add("statictext", undefined, "The character added after the name of a group and sub-groups.");
+	win.left.groupSuffix.description.enabled = false;
 
-	var paddingPrefixRadiobuttons = [];
+	// replace spaces
+	win.left.replaceSpaces = win.left.add("panel", undefined, "Replace Spaces");
+	win.left.replaceSpaces.orientation = "column";
+	win.left.replaceSpaces.alignChildren = ["fill", "fill"];
+
+	win.left.replaceSpaces.group = win.left.replaceSpaces.add("group");
+	win.left.replaceSpaces.group.orientation = "row";
+	win.left.replaceSpaces.group.alignChildren = "left";
+
+	var replaceSpaceRadiobuttons = [];
 
 	for (var i = 0; i < suffixes.length;i ++)
 	{
-		paddingPrefixRadiobuttons[i] = win.left.numberingPrefix.group.add("radiobutton", undefined, suffixes[i]);
-		if (suffixes[i] === g.options.groupSuffix)
+		replaceSpaceRadiobuttons[i] = win.left.replaceSpaces.group.add("radiobutton", undefined, suffixes[i]);
+		replaceSpaceRadiobuttons[i].addEventListener("click", function(event) { filenamePreview(event, win); });
+		if (suffixes[i] === g.options.replaceSpace)
 		{
-			paddingPrefixRadiobuttons[i].value = true;
+			replaceSpaceRadiobuttons[i].value = true;
 		}
 	}
 
-	win.left.numberingPrefix.description1 = win.left.numberingPrefix.add("statictext", undefined, "Duplicate names are numbered, e.g. \"_0001\"");
-	win.left.numberingPrefix.description1.enabled = false;
+	win.input.replaceSpaces = replaceSpaceRadiobuttons; // for filenamePreview()
+
+	win.left.replaceSpaces.descriptionGroup = win.left.replaceSpaces.add("group");
+	win.left.replaceSpaces.descriptionGroup.orientation = "column";
+	win.left.replaceSpaces.descriptionGroup.alignChildren = ["fill", "fill"];
+	win.left.replaceSpaces.descriptionGroup.spacing = 0;
+
+	win.left.replaceSpaces.description = win.left.replaceSpaces.descriptionGroup.add("statictext", undefined, "Replaces all spaces in filename (except \"Group Suffix\").");
+	win.left.replaceSpaces.description.enabled = false;
+
+	// duplicate prefix
+	win.left.duplicatePrefix = win.left.add("panel", undefined, "Duplicate Prefix");
+	win.left.duplicatePrefix.orientation = "column";
+	win.left.duplicatePrefix.alignChildren = ["fill", "fill"];
+
+	win.left.duplicatePrefix.group = win.left.duplicatePrefix.add("group");
+	win.left.duplicatePrefix.group.orientation = "row";
+	win.left.duplicatePrefix.group.alignChildren = "left";
+
+	var duplicatePrefixRadiobuttons = [];
+
+	for (var i = 0; i < suffixes.length;i ++)
+	{
+		duplicatePrefixRadiobuttons[i] = win.left.duplicatePrefix.group.add("radiobutton", undefined, suffixes[i]);
+		duplicatePrefixRadiobuttons[i].addEventListener("click", function(event) { filenamePreview(event, win); });
+		if (suffixes[i] === g.options.duplicatePrefix)
+		{
+			duplicatePrefixRadiobuttons[i].value = true;
+		}
+	}
+
+	win.input.duplicatePrefixes = duplicatePrefixRadiobuttons; // for filenamePreview()
+
+	win.left.duplicatePrefix.preview = win.left.duplicatePrefix.add("statictext", undefined, "");
+	win.left.duplicatePrefix.preview.enabled = false;
 
 	// sorting order
 	win.left.sortingOrder = win.left.add("panel", undefined, "Sorting Order");
@@ -925,7 +1006,7 @@ function showDialog()
 			ascRadiobutton.value = true;
 	}
 
-	win.left.sortingOrder.description = win.left.sortingOrder.add("statictext", undefined, "Sorting order is mostly relevant in case of duplicate names.");
+	win.left.sortingOrder.description = win.left.sortingOrder.add("statictext", undefined, "Layer export order - mostly relevant in case of duplicate names.");
 	win.left.sortingOrder.description.enabled = false;
 
 	// resize
@@ -1155,12 +1236,22 @@ function showDialog()
 			}
 		}
 
-		var paddingPrefix = "";
-		for (var i = 0; i < paddingPrefixRadiobuttons.length; i++)
+		var duplicatePrefix = "";
+		for (var i = 0; i < duplicatePrefixRadiobuttons.length; i++)
 		{
-			if (paddingPrefixRadiobuttons[i].value)
+			if (duplicatePrefixRadiobuttons[i].value)
 			{
-				paddingPrefix = paddingPrefixRadiobuttons[i].text
+				duplicatePrefix = duplicatePrefixRadiobuttons[i].text
+				break;
+			}
+		}
+
+		var replaceSpace = "";
+		for (var i = 0; i < replaceSpaceRadiobuttons.length; i++)
+		{
+			if (replaceSpaceRadiobuttons[i].value)
+			{
+				replaceSpace = replaceSpaceRadiobuttons[i].text
 				break;
 			}
 		}
@@ -1206,7 +1297,8 @@ function showDialog()
 			background: background.value,
 			format: format.selection.text,
 			groupSuffix: groupSuffix,
-			paddingPrefix: paddingPrefix,
+			duplicatePrefix: duplicatePrefix,
+			replaceSpace: replaceSpace,
 			sortingOrder: sortingOrder,
 			resize: resize.value,
 			resizeItems: resizeItems,
@@ -1216,12 +1308,13 @@ function showDialog()
 		try
 		{
 			saveSettings();
-			win.close();
 		}
 		catch (err)
 		{
-			alert("Could not save preferences\n" + err);
+			alert("Could not save preferences\n" + err + "\nLine: " + err.line);
 		}
+
+		win.close();
 	}
 
 	var cancelButton = buttonGroup.add("button", undefined, "Cancel", {name: "cancel"});
@@ -1248,8 +1341,66 @@ function showDialog()
 		}
 	};
 
+	filenamePreview(undefined, win);
+
 	win.center();
 	win.show();
+}
+
+function filenamePreview(event, win)
+{
+	// try to find a layer in a group
+	var layer = app.activeDocument.layers[0];
+	for (var i = 0; i < app.activeDocument.layerSets.length; i++)
+	{
+		if (app.activeDocument.layerSets[i].artLayers.length > 0)
+		{
+			layer = app.activeDocument.layerSets[i].artLayers[0];
+			break;
+		}
+	}
+
+	var docName = app.activeDocument.name;
+	var filename = win.input.filename.text;
+	var format = win.input.format.selection.text;
+
+	var groupSuffix = "";
+	for (var i = 0; i < win.input.groupSuffixes.length; i++)
+	{
+		if (win.input.groupSuffixes[i].value)
+		{
+			groupSuffix = win.input.groupSuffixes[i].text;
+			break;
+		}
+	}
+
+	var duplicatePrefix = "";
+	for (var i = 0; i < win.input.duplicatePrefixes.length; i++)
+	{
+		if (win.input.duplicatePrefixes[i].value)
+		{
+			duplicatePrefix = win.input.duplicatePrefixes[i].text;
+			break;
+		}
+	}
+
+	var replaceSpace = "";
+	for (var i = 0; i < win.input.replaceSpaces.length; i++)
+	{
+		if (win.input.replaceSpaces[i].value)
+		{
+			replaceSpace = win.input.replaceSpaces[i].text;
+			break;
+		}
+	}
+
+	groupSuffix = getPrefixSuffix(groupSuffix);
+	duplicatePrefix = getPrefixSuffix(duplicatePrefix);
+	replaceSpace = getPrefixSuffix(replaceSpace);
+
+	var name = resolveName(layer, docName, filename, groupSuffix, replaceSpace);
+	win.left.filename.preview.text = "Example: \"" + name + format + "\"";
+	win.left.duplicatePrefix.preview.text = "Duplicate names are numbered, example: \"Layer" + duplicatePrefix + "0001" + format + "\"";
 }
 
 // Load the window settings
@@ -1285,7 +1436,8 @@ function loadSettings()
 			confirmOverwrite: true,
 			format: "",
 			groupSuffix: "Underscore",
-			paddingPrefix: "Underscore",
+			duplicatePrefix: "Underscore",
+			replaceSpace: "Space",
 			sortingOrder: "ASC",
 			resize: false,
 			resizeItems: [{resizeOption: kResizeOption.WIDTH, resizeValue: app.activeDocument.width.as("px")}],
@@ -1333,7 +1485,8 @@ function loadSettings()
 		confirmOverwrite: des.getBoolean(kOptions.CONFIRMOVERWRITE),
 		format: des.getString(kOptions.FORMAT),
 		groupSuffix: des.getString(kOptions.GROUPSUFFIX),
-		paddingPrefix: des.getString(kOptions.PADDINGPREFIX),
+		duplicatePrefix: des.getString(kOptions.DUPLICATEPREFIX),
+		replaceSpace: des.getString(kOptions.REPLACESPACE),
 		sortingOrder: des.getString(kOptions.SORTINGORDER),
 		resize: des.getBoolean(kOptions.RESIZE),
 		resizeItems: resizeItems,
@@ -1382,7 +1535,8 @@ function saveSettings()
 	des.putBoolean(kOptions.CONFIRMOVERWRITE, g.options.confirmOverwrite);
 	des.putString(kOptions.FORMAT, g.options.format);
 	des.putString(kOptions.GROUPSUFFIX, g.options.groupSuffix);
-	des.putString(kOptions.PADDINGPREFIX, g.options.paddingPrefix);
+	des.putString(kOptions.DUPLICATEPREFIX, g.options.duplicatePrefix);
+	des.putString(kOptions.REPLACESPACE, g.options.replaceSpace);
 	des.putString(kOptions.SORTINGORDER, g.options.sortingOrder);
 	des.putBoolean(kOptions.RESIZE, g.options.resize);
 	des.putString(kOptions.RESIZEOPTIONS, resizeOptions);
