@@ -1369,7 +1369,7 @@ function filenamePreview(event, win)
 		}
 	}
 
-	var docName = app.activeDocument.name;
+	var docName = getDocumentName(app.activeDocument);
 	var filename = win.input.filename.text;
 	var format = win.input.format.selection.text;
 

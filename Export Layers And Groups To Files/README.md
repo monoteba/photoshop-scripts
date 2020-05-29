@@ -25,7 +25,8 @@ Tested with Photoshop CC 2020.
 - [Filename](#Filename)
     - [File Format](#File-Format)
 - [Group Suffix](#Group-Suffix)
-- [Numbering Prefix](#Numbering-Prefix)
+- [Replace Spaces](#Replace-Spaces)
+- [Duplicate Prefix](#Duplicate-Prefix)
 - [Sorting Order](#Sorting-Order)
 - [Resize](#Resize)
 - [Layers](#Layers)
@@ -82,7 +83,11 @@ The formats available are dependent on the documents bit depth and color mode.
 
 Optional character that is put after each group name.
 
-### Numbering Prefix
+### Replace Spaces
+
+Replace all spaces in filename, except for **Group Suffix** and **Duplicate Prefix**.
+
+### Duplicate Prefix
 
 Optional character that is put before number. 
 
