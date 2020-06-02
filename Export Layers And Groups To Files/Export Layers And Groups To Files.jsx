@@ -34,7 +34,7 @@ TIFF_TRANSPARENCY = true;
 
 const kOptions = 
 {
-	UUID: "264a94df-9c1e-461f-b6c5-15323fe8599b",
+	UUID: "610ee757-db33-42ab-aec7-a1feb9e84475",
 	FILENAME: app.stringIDToTypeID("Filename"),
 	NOCOLOR: app.stringIDToTypeID("NoColor"),
 	RED: app.stringIDToTypeID("Red"),
@@ -57,7 +57,6 @@ const kOptions =
 	REPLACESPACE: app.stringIDToTypeID("ReplaceSpace"),
 	BACKGROUND: app.stringIDToTypeID("Background"),
 	SORTINGORDER: app.stringIDToTypeID("SortingOrder"),
-	CONFIRMOVERWRITE: app.stringIDToTypeID("ConfirmOverwrite"),
 	RESIZE: app.stringIDToTypeID("Resize"),
 	RESIZEOPTIONS: app.stringIDToTypeID("ResizeOptions"),
 	RESIZEVALUES: app.stringIDToTypeID("ResizeValues"),
@@ -135,22 +134,19 @@ function main()
 
 	for (var n = 0; n < resizeCount; n++)
 	{
-		if (g.options.confirmOverwrite)
+		// Make a dry run to see if any files already exists
+		for (var i = 0; i < g.targetLayers.length; i++)
 		{
-			// Make a dry run to see if any files already exists
-			for (var i = 0; i < g.targetLayers.length; i++)
+			var result = saveFile(g.doc, outputNames[n][i], true);
+			if (result === false)
 			{
-				var result = saveFile(g.doc, outputNames[n][i], true);
-				if (result === false)
-				{
-					// g.doc.close(SaveOptions.DONOTSAVECHANGES);
-					progress.close();
-					return;
-				}
-				else if (result === true)
-				{
-					break;
-				}
+				// g.doc.close(SaveOptions.DONOTSAVECHANGES);
+				progress.close();
+				return;
+			}
+			else if (result === true)
+			{
+				break;
 			}
 		}
 	}
@@ -1163,11 +1159,11 @@ function showDialog()
 	win.right.export = win.right.add("panel", undefined, "Export");
 	win.right.export.alignChildren = ["fill", "fill"];
 
-	var layers = win.right.export.add("checkbox", undefined, "Layers");
 	var groups = win.right.export.add("checkbox", undefined, "Groups");
+	var layers = win.right.export.add("checkbox", undefined, "Layers");
 	// exportSpacer = win.right.export.add("panel"); // spacer
 	// exportSpacer.minimumSize.height = exportSpacer.maximumSize.height = 1;
-	var children = win.right.export.add("checkbox", undefined, "Child Layers");
+	var children = win.right.export.add("checkbox", undefined, "Layers Inside Groups");
 	var hidden = win.right.export.add("checkbox", undefined, "Hidden Layers");
 
 	// settings
@@ -1220,13 +1216,6 @@ function showDialog()
 	blue.value = g.options.blue;
 	violet.value = g.options.violet;
 	gray.value = g.options.gray;
-
-	// confirm overwrite
-	win.right.other = win.right.add("panel", undefined, "Other");
-	win.right.other.alignChildren = "left";
-
-	var confirmOverwrite = win.right.other.add("checkbox", undefined, "Confirm Overwriting Existing Files");
-	confirmOverwrite.value = g.options.confirmOverwrite;
 
 	// buttons
 	var buttonGroup = win.add("group");
@@ -1311,7 +1300,6 @@ function showDialog()
 			sortingOrder: sortingOrder,
 			resize: resize.value,
 			resizeItems: resizeItems,
-			confirmOverwrite: confirmOverwrite.value,
 		};
 
 		try
@@ -1330,7 +1318,7 @@ function showDialog()
 	cancelButton.minimumSize = [120, 0];
 	cancelButton.onClick = function() { saveSettingsAndClose(); }
 
-	var saveButton = buttonGroup.add("button", undefined, "Save", {name: "ok"});
+	var saveButton = buttonGroup.add("button", undefined, "Save...", {name: "ok"});
 	saveButton.minimumSize = [120, 0];
 	saveButton.onClick = function()
 	{	
@@ -1408,7 +1396,7 @@ function filenamePreview(event, win)
 	replaceSpace = getPrefixSuffix(replaceSpace);
 
 	var name = resolveName(layer, docName, filename, groupSuffix, replaceSpace);
-	win.left.filename.preview.text = "Active layer: \"" + name + format + "\"";
+	win.left.filename.preview.text = "Example: \"" + name + format + "\"";
 	win.left.duplicatePrefix.preview.text = "Duplicate names are numbered, example: \"Layer" + duplicatePrefix + "0001" + format + "\"";
 }
 
@@ -1442,7 +1430,6 @@ function loadSettings()
 			locked: false,
 			children: false,
 			background: false,
-			confirmOverwrite: true,
 			format: "",
 			groupSuffix: "Underscore",
 			duplicatePrefix: "Underscore",
@@ -1491,7 +1478,6 @@ function loadSettings()
 		locked: des.getBoolean(kOptions.LOCKED),
 		children: des.getBoolean(kOptions.CHILDREN),
 		background: des.getBoolean(kOptions.BACKGROUND),
-		confirmOverwrite: des.getBoolean(kOptions.CONFIRMOVERWRITE),
 		format: des.getString(kOptions.FORMAT),
 		groupSuffix: des.getString(kOptions.GROUPSUFFIX),
 		duplicatePrefix: des.getString(kOptions.DUPLICATEPREFIX),
@@ -1541,7 +1527,6 @@ function saveSettings()
 	des.putBoolean(kOptions.LOCKED, g.options.locked);
 	des.putBoolean(kOptions.CHILDREN, g.options.children);
 	des.putBoolean(kOptions.BACKGROUND, g.options.background);
-	des.putBoolean(kOptions.CONFIRMOVERWRITE, g.options.confirmOverwrite);
 	des.putString(kOptions.FORMAT, g.options.format);
 	des.putString(kOptions.GROUPSUFFIX, g.options.groupSuffix);
 	des.putString(kOptions.DUPLICATEPREFIX, g.options.duplicatePrefix);

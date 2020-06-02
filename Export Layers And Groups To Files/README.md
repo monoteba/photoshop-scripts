@@ -29,16 +29,15 @@ Tested with Photoshop CC 2020.
 - [Duplicate Prefix](#Duplicate-Prefix)
 - [Sorting Order](#Sorting-Order)
 - [Resize](#Resize)
-- [Layers](#Layers)
 - [Groups](#Groups)
-- [Child Layers](#Child-Layers)
+- [Layers](#Layers)
+- [Layers Inside Groups](#Layers-Inside-Groups)
 - [Hidden Layers](#Hidden-Layers)
 - [Keep Background Layer](#Keep-Background-Layer)
 - [Keep Adjustment Layers](#Keep-Adjustment-Layers)
 - [Keep Locked Layers](#Keep-Locked-Layers)
 - [Trim Layer](#Trim-Layer)
 - [Layer Colors](#Layer-Colors)
-- [Confirm Overwriting Existing Files](#Confirm-Overwriting-Existing-Files)
 
 ### Filename
 
@@ -103,15 +102,15 @@ Allows you to export in multiple sizes by resizing to match a specific **width**
 
 When this option is enabled, the exported layers will be placed in a subfolder with the name of the size, like `Width_256px`.
 
-### Layers
-
-Will include layers in the export.
-
 ### Groups
 
 Will include groups in the export.
 
-### Child Layers
+### Layers
+
+Will include layers in the export.
+
+### Layers Inside Groups
 
 If enabled, the script will export layers in groups and sub-groups separately. Otherwise only top-level layers and groups are exported.
 
@@ -142,9 +141,3 @@ Crops the image by surrounding transparent pixels.
 Only layers and groups with the specified layer color(s) are exported. This is especially useful when mixed with the **Hidden Layers** option.
 
 Note: The **Background** layer is considered to have "No Color".
-
-### Confirm Overwriting Existing Files
-
-Performs a test run prior to saving any files, and warns you if one or more files will be overwritten.
-
-If you have many layers, and don't care about the added safety, you can disable this for a small performance gain.
